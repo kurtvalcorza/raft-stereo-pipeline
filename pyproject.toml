@@ -1,0 +1,38 @@
+[project]
+name = "raft-stereo-pipeline"
+version = "0.1.0"
+description = "DIMER pipeline for RAFT-Stereo dense stereo disparity (princeton-vl/RAFT-Stereo, Middlebury checkpoint): carried upstream source verified by SHA-256, EPE / bad-pixel evaluation against SGBM and median baselines, and bounded stereo fine-tuning with a portable SafeTensors adapter"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+license = { file = "LICENSE" }
+authors = [{ name = "Kurt Valcorza" }]
+dependencies = [
+  "torch==2.14.0",
+  "numpy==2.5.3",
+  "scipy==1.18.1",
+  "opt-einsum==3.4.0",
+  "opencv-python-headless==5.0.0.93",
+  "safetensors==0.8.0",
+  "pillow==11.3.0",
+]
+[project.optional-dependencies]
+dev = ["pytest==8.4.2", "ruff==0.16.6"]
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+[tool.hatch.build.targets.wheel]
+packages = ["src/raft_stereo_pipeline"]
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 130
+target-version = "py312"
+src = ["src", "tests"]
+# The carried upstream RAFT-Stereo source is kept byte-for-byte (SHA-256 verified); it is not linted or reformatted.
+extend-exclude = ["tutorials", "src/raft_stereo_pipeline/third_party"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]

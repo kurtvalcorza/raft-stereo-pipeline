@@ -1,0 +1,7 @@
+# Snapshot files are digest-verified byte-for-byte against dimer-base-manifest.json; never convert their line endings.
+weights/** -text
+# The carried upstream RAFT-Stereo source is verified against UPSTREAM_SHA256; keep its bytes exactly.
+src/raft_stereo_pipeline/third_party/** -text
+# The hash lock and the stage runner are carried into the notebook and hashed there; keep LF.
+tutorials/requirements-colab.lock.txt text eol=lf
+tools/tutorial_stages.py text eol=lf

@@ -1,0 +1,5 @@
+# Transitive versions held at those of detr-detection-pipeline's tutorials/requirements-colab.lock.txt, whose isolated
+# environment has been installed on a Colab/Kaggle T4; only opencv-python-headless and opt-einsum are new here.
+cuda-pathfinder==1.8.2
+filelock==4.0.4
+markupsafe==3.0.3

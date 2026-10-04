@@ -1,0 +1,17 @@
+{
+  "format": "dimer_url_snapshot",
+  "formatVersion": 1,
+  "modelKey": "raftstereo-middlebury",
+  "modelId": "princeton-vl/RAFT-Stereo/raftstereo-middlebury",
+  "revision": "unpinned",
+  "files": [
+    {
+      "path": "raftstereo-middlebury.pth",
+      "url": "https://www.dropbox.com/scl/fi/5khx1bhz84dapi8vtwapg/models.zip?rlkey=ggddrn1du1iiq6mgc2dsdpmwi&dl=1",
+      "archiveMember": "raftstereo-middlebury.pth",
+      "bytes": null,
+      "sha256": null
+    }
+  ],
+  "totalBytes": null
+}
