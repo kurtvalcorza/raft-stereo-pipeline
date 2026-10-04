@@ -519,7 +519,7 @@ def stage_infer(run: Run) -> None:
         valid = _valid(record)
         before = pretrained.estimate(record["left"], record["right"], iters=opts.iters)["disparity"]
         after = adapted.estimate(record["left"], record["right"], iters=opts.iters)["disparity"]
-        name = str(record["id"]).replace("/", "_")
+        name = Path(str(record["id"])).with_suffix("").as_posix().replace("/", "_")  # "scene2/im0.png" -> "scene2_im0"
         np.save(disparity_dir / f"{name}.npy", after)
         write_disparity_png16(disparity_dir / f"{name}.png", after)
         row = {
