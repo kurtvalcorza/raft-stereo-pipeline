@@ -144,4 +144,19 @@ Google Colab's kernel and upload dialog; the full default field values (32 pairs
 | 2026-10-04 | this commit's working tree, regenerated in a scratch copy with a random-weight checkpoint pinned | local Linux CPU container (4 threads), `nbclient` | run A: default path + both BYOD branches, reduced fields, random weights | PASS (plumbing only; metrics meaningless) |
 | 2026-10-04 | same | same | run B: default path + incompatible BYOD folder | default path PASS; BYOD refused by name, as intended |
 
-No hosted (Colab/Kaggle) execution has been recorded yet.
+| 2026-10-05 | `49e50cc`, notebook blob `b6ffed7` | Google Colab, Tesla T4, kernel Python 3.13.15; isolated env Python 3.12.12, `torch 2.14.0+cu130` CUDA | default fields, real pinned checkpoint, BYOD off | PASS — every stage completed; see below |
+
+### 2026-10-05 — Google Colab T4, default fields with the real checkpoint
+
+- **Subject:** `tutorials/raft_stereo_colab.ipynb`, blob `b6ffed70d42747a1e36d9a15749f42dc9456b866` at commit `49e50cc` (carried files labelled with its parent `61c9adf`). Every source cell of the executed copy is byte-identical to that blob. Executed copy: `docs/execution-evidence/2026-10-05/raft_stereo_colab_b6ffed7_colab-t4.ipynb`.
+- **Runtime:** Google Colab, Tesla T4 (15,360 MiB), kernel CPython 3.13.15; isolated environment built by the notebook in 61 s (CPython 3.12.12, 35 locked packages, `torch 2.14.0+cu130`, `opencv` 5.0.0, CUDA).
+- **Observed result:** no cell raised an error.
+  - Section 3: the 8 carried upstream files verified; `raftstereo-middlebury.pth` downloaded and verified at the pinned 44,617,876 bytes and SHA-256 `d22e84c0…5819` (12.4 s).
+  - Section 4 (demonstration pair, 32 iterations): RAFT-Stereo EPE 0.158 px, bad-3px 0.0094; SGBM EPE 0.469, bad-3px 0.0197, density 0.756.
+  - Section 5 (probes): the identical-image probe (true disparity 0) returned a median of 235.2 px (5th–95th percentile 225.3–242.0, EPE 234.7), while the 8 px shift probe returned 8.001 px (EPE 0.032). Because the shifted probe, the demonstration pair and every held-out scene agree with ground truth, the sign and pixel scale of the pipeline are confirmed; the zero-disparity failure is a behaviour of this checkpoint on a degenerate input whose cause has not been investigated. It contradicts the notebook's Section 5 guidance, which says a correctly wired pipeline reports a median near 0 there.
+  - Section 6: 32 rendered pairs validated, 24 / 8 split with no shared ids; three refusal probes rejected.
+  - Sections 7–8 (held-out 8 pairs, 32 iterations; adapter reloaded in a fresh process): EPE / bad-3px — median 8.223 / 0.632, SGBM 0.653 / 0.028, pretrained 0.231 / 0.0079, adapted 0.112 / 0.0045; the adapted model's EPE was lower on 8 of 8 pairs. Fine-tuning: encoders frozen, 5,728,144 of 11,116,176 parameters trainable, 36 steps, batch 2, lr 2e-5, float32, 21.9 s; adapter 22,917,592 bytes, 42 tensors.
+  - Section 9 (three unseen scenes): adapted EPE 0.084, 0.118, 0.079 px against pretrained 0.137, 0.174, 0.162; lower on 3 of 3.
+  - Section 10: reload parity exact (mean and max absolute difference 0.0 px; held-out EPE 0.11171624 in memory and in a fresh process).
+- **Caveats:** this was not a strict one-pass, clean-state `Run all`. Execution counts start at 2 and the run directory sits inside a clone of this repository (the session that ran the pin dry run), and counts 13–15 are missing between the `infer` and `reload` cells, so three other executions took place in between. The recorded outputs are complete and consistent, and the notebook verifies its own carried code and checkpoint, but REL1/REL2 should be confirmed by a fresh-runtime run. The BYOD branches were not run (REL12 open). The zero-disparity probe result above is unexplained. One seed; the rendered sample is tutorial evidence, not a benchmark.
+

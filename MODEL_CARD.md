@@ -109,7 +109,16 @@ The pipeline reports, per pair and averaged over pairs (`disparity_metrics`, `ag
 
 Reading only `epe` hides whether errors are rare and large or common and small. Reading only a bad-pixel rate hides how wrong the failures are. Both are needed to compare a network with SGBM, whose unmatched pixels are filled and can be badly wrong. Every measure is printed next to three baselines scored on the same pixels: `median` (the training split's median disparity everywhere), `sgbm` (OpenCV StereoSGBM, with its matching density reported), and `pretrained` (the checkpoint before adaptation).
 
-**No value has been measured for this model yet.** The checkpoint is pinned, but no hosted run exists. The local run recorded below used random weights, and its numbers are not reported because they say nothing about the model. Upstream benchmark values in the paper are reported by the upstream authors and were not reproduced here.
+Measured in one Google Colab T4 run of the tutorial with the pinned checkpoint (8 held-out rendered pairs, 32 refinement iterations; see Verification records):
+
+| Method | `epe` (px) | `bad_1px` | `bad_3px` | `d1_all` |
+|---|---|---|---|---|
+| median | 8.2234 | 0.8528 | 0.6321 | 0.6321 |
+| sgbm | 0.6533 | 0.0365 | 0.0283 | 0.0283 |
+| pretrained | 0.2310 | 0.0122 | 0.0079 | 0.0079 |
+| adapted (36 steps, encoders frozen) | 0.1117 | 0.0086 | 0.0045 | 0.0045 |
+
+The adapted model's EPE was lower on 8 of 8 held-out pairs and on 3 of 3 unseen pairs. These are tutorial-sample values on rendered scenes from one seed, not benchmark results. On a degenerate probe of two identical random-dot images (true disparity 0) the pretrained checkpoint returned a median of 235.2 px, while an 8 px shifted probe returned 8.001 px; the zero-disparity failure is unexplained. Upstream benchmark values in the paper are reported by the upstream authors and were not reproduced here.
 
 ###### Decision thresholds
 
@@ -193,6 +202,14 @@ The MIT licence of the upstream code and checkpoint imposes no use restrictions.
 - `save_artifact(path)` / `load_artifact(path)` write and read the SafeTensors adapter (format `raft-stereo-adapter-v1`).
 
 ## Verification records
+
+- **Date:** 2026-10-05
+- **Subject:** `tutorials/raft_stereo_colab.ipynb`, blob `b6ffed7` at commit `49e50cc`, with the pinned checkpoint
+- **Runtime:** Google Colab, Tesla T4; kernel CPython 3.13.15; isolated environment CPython 3.12.12, `torch 2.14.0+cu130` with CUDA
+- **Procedure:** default fields; the notebook's cells executed in the Colab session that had run the pin dry run, with three extra executions between the inference and reload cells
+- **Observed result:** every stage completed without error; checkpoint verified; the values in Performance Measures; adapter reload parity exact (0.0 px). The executed copy is in `docs/execution-evidence/2026-10-05/`
+- **Caveats:** not a strict clean-state one-pass `Run all`; BYOD branches not run; zero-disparity probe failed as described in Performance Measures
+
 
 - **Date:** 2026-10-04
 - **Subject:** `tutorials/raft_stereo_colab.ipynb`, regenerated in a scratch copy of the repository after a random-weight checkpoint of the carried architecture had been pinned there with `tools/pin_snapshot.py --archive`
