@@ -118,7 +118,7 @@ Measured in one Google Colab T4 run of the tutorial with the pinned checkpoint (
 | pretrained | 0.2310 | 0.0122 | 0.0079 | 0.0079 |
 | adapted (36 steps, encoders frozen) | 0.1117 | 0.0086 | 0.0045 | 0.0045 |
 
-The adapted model's EPE was lower on 8 of 8 held-out pairs and on 3 of 3 unseen pairs. These are tutorial-sample values on rendered scenes from one seed, not benchmark results. On a degenerate probe of two identical random-dot images (true disparity 0) the pretrained checkpoint returned a median of 235.2 px, while an 8 px shifted probe returned 8.001 px; the zero-disparity failure is unexplained. Upstream benchmark values in the paper are reported by the upstream authors and were not reproduced here.
+The adapted model's EPE was lower on 8 of 8 held-out pairs and on 3 of 3 unseen pairs. These are tutorial-sample values on rendered scenes from one seed, not benchmark results. On a degenerate probe of two identical random-dot images (true disparity 0) the pretrained checkpoint returned a median of 235.2 px, while an 8 px shifted probe returned 8.001 px. The cause was not investigated; the tutorial now probes shifts of 2 px and 8 px instead. Upstream benchmark values in the paper are reported by the upstream authors and were not reproduced here.
 
 ###### Decision thresholds
 

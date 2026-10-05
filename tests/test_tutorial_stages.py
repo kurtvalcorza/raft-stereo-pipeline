@@ -139,6 +139,9 @@ def test_sample_path_runs_every_stage_in_order(stages) -> None:
         assert (out / name).is_file(), name
     manifest = json.loads((out / "raft_stereo_input_manifest.json").read_text())
     assert manifest["verdict"] == "accepted" and "differ in size" in manifest["findings"][-1]["rejected"]
+    probes = json.loads((out / "probes.json").read_text())["probes"]
+    # both probes are non-zero shifts: the checkpoint mis-reads a zero-disparity pair of identical images
+    assert [probe["true_disparity_px"] for probe in probes] == [2, 8]
     dataset = json.loads((out / "raft_stereo_dataset.json").read_text())
     assert len(dataset["split"]["train"]) == 3 and len(dataset["split"]["held_out"]) == 1
     assert all("rejected" in probe for probe in dataset["refusal_probes"])

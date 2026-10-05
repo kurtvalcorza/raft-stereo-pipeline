@@ -51,7 +51,7 @@ def test_dataset_scenes_are_distinct_across_seeds():
     assert not first & second
 
 
-@pytest.mark.parametrize("shift", [0, 8])
+@pytest.mark.parametrize("shift", [0, 2, 8])
 def test_random_dot_pair_has_the_stated_disparity(shift):
     pair = random_dot_pair(shift)
     left, right = np.asarray(pair["left"]), np.asarray(pair["right"])
