@@ -109,7 +109,7 @@ The pipeline reports, per pair and averaged over pairs (`disparity_metrics`, `ag
 
 Reading only `epe` hides whether errors are rare and large or common and small. Reading only a bad-pixel rate hides how wrong the failures are. Both are needed to compare a network with SGBM, whose unmatched pixels are filled and can be badly wrong. Every measure is printed next to three baselines scored on the same pixels: `median` (the training split's median disparity everywhere), `sgbm` (OpenCV StereoSGBM, with its matching density reported), and `pretrained` (the checkpoint before adaptation).
 
-Measured in a Google Colab T4 run of the tutorial with the pinned checkpoint (8 held-out rendered pairs, 32 refinement iterations; see Verification records); a second, clean one-pass run reproduced every value except the adapted `bad_3px` and `d1_all`, 0.0046:
+Measured in a Google Colab T4 run of the tutorial with the pinned checkpoint (8 held-out rendered pairs, 32 refinement iterations; see Verification records); two later clean one-pass runs reproduced every value except the adapted `bad_3px` and `d1_all`, 0.0046:
 
 | Method | `epe` (px) | `bad_1px` | `bad_3px` | `d1_all` |
 |---|---|---|---|---|
@@ -202,6 +202,14 @@ The MIT licence of the upstream code and checkpoint imposes no use restrictions.
 - `save_artifact(path)` / `load_artifact(path)` write and read the SafeTensors adapter (format `raft-stereo-adapter-v1`).
 
 ## Verification records
+
+- **Date:** 2026-10-05
+- **Subject:** `tutorials/raft_stereo_colab.ipynb`, blob `44474b8` at commit `1710c27` (current notebook; 8 px and 16 px probes), with the pinned checkpoint
+- **Runtime:** fresh Google Colab runtime, Tesla T4; kernel CPython 3.13.15; isolated environment CPython 3.12.12, `torch 2.14.0+cu130` with CUDA
+- **Procedure:** `Run all` with no field edited, one pass (execution counts 1–14)
+- **Observed result:** every stage completed without error; probes read as 8.001 px and 16.01 px; held-out values as in Performance Measures (adapted `bad_3px` 0.0046); reload parity exact. The executed copy is in `docs/execution-evidence/2026-10-05/`
+- **Caveats:** BYOD branches not run on the hosted runtime; one seed
+
 
 - **Date:** 2026-10-05
 - **Subject:** `tutorials/raft_stereo_colab.ipynb`, blob `c9bd882` at commit `f0d56f1` (2 px and 8 px probes), with the pinned checkpoint

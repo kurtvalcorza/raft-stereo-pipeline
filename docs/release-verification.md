@@ -172,3 +172,16 @@ Google Colab's kernel and upload dialog; the full default field values (32 pairs
 ### 2026-10-05 — random-dot probe diagnostic (outside the tutorial)
 
 A sweep of uniform random-dot shifts (0, 1, 2, 4, 8, 16 px) against dot sizes (1, 2, 4, 8 px), run with the pinned checkpoint in Colab through `RaftStereoPipeline.from_pretrained` at `f0d56f1`. Every shift of 0–4 px failed at every dot size (medians 128–367 px); 8 px and 16 px were exact (EPE ≤ 0.032 px). Table: `docs/execution-evidence/2026-10-05/probe_shift_diagnostic.md`.
+
+### 2026-10-05 — Google Colab T4, clean one-pass `Run all` of blob `44474b8` (current notebook)
+
+- **Subject:** `tutorials/raft_stereo_colab.ipynb`, blob `44474b8480b4ee6a0099fa678c6b4efb4711906b` at commit `1710c27` (8 px and 16 px probes; carried files labelled with the parent `ac3cc07`). Source cells byte-identical to that blob. Executed copy: `docs/execution-evidence/2026-10-05/raft_stereo_colab_44474b8_colab-t4.ipynb`.
+- **Runtime and procedure:** fresh Google Colab runtime, Tesla T4, kernel CPython 3.13.15; `Run all` with no field edited; execution counts 1–14 in order; outputs under `/content/outputs/`; isolated environment (CPython 3.12.12, 35 locked packages, `torch 2.14.0+cu130`, CUDA) built in 68 s.
+- **Observed result:** every stage completed without error.
+  - Section 3: checkpoint downloaded and verified at the pinned SHA-256 (12.5 s).
+  - Section 5: probes 8 px → median 8.001 px (5th–95th 7.943–8.069, EPE 0.032); 16 px → 16.010 px (15.951–16.070, EPE 0.030).
+  - Section 6: 32 pairs, 24 / 8 split, no shared ids; three refusals.
+  - Sections 7–9 (held-out, EPE / bad-3px): median 8.223 / 0.632, SGBM 0.653 / 0.028, pretrained 0.231 / 0.0079, adapted 0.112 / 0.0046; adapted lower on 8 of 8. Fine-tuning 36 steps, 5,728,144 trainable parameters, 23.0 s.
+  - Section 9 (unseen pairs): adapted lower on 3 of 3.
+  - Section 10: reload parity exact (0.0 px; held-out EPE 0.11171892 in memory and in a fresh process).
+- **Caveats:** BYOD branches not run (REL12 open). One seed; rendered tutorial sample, not a benchmark.
