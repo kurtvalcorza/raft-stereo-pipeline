@@ -38,7 +38,7 @@ from .samples import read_disparity
 MODEL_ID = "princeton-vl/RAFT-Stereo/raftstereo-middlebury"
 # A URL-hosted checkpoint has no commit, so its pinned identity is the SHA-256 of the checkpoint's own bytes
 # (the .pth file inside the archive, not the archive). "unpinned" until tools/pin_snapshot.py records it.
-MODEL_REVISION = "unpinned"
+MODEL_REVISION = "d22e84c0e431bf31d7cc66902c40601859eb40b35ef7f4399ea81276c2915819"
 MODEL_LICENSE = "mit"
 MODEL_KEY = "raftstereo-middlebury"
 UNPINNED = "unpinned"

@@ -1,7 +1,7 @@
 # Release verification
 
 `tutorials/raft_stereo_colab.ipynb` (`E2E` / `GUIDED`, **standalone** carrier, isolated hash-locked environment) is a
-**release candidate** in initial development. The checkpoint is **not yet pinned**, and the exact notebook revision has
+**release candidate** in initial development. The checkpoint is pinned (44,617,876 bytes, SHA-256 `d22e84c0…5819`), but the exact notebook revision has
 not executed top-to-bottom in a clean hosted runtime. Unit tests, JSON validation, code-cell compilation, the generator
 parity checks and `tools/validate_release_assets.py` are necessary checks but are **not** runtime evidence under DIMER
 Notebook Specification 2.2 (REL8). This file is the durable release-gate record.
@@ -46,8 +46,8 @@ used anywhere in CI.
   assertion, provenance with `remote_code_fetched: False`, BYOD pair report, error record);
 - `MODEL_ID`/`MODEL_REVISION` never rebound or cited in a kernel cell; the revision is a 64-hex SHA-256 or the
   `"unpinned"` sentinel, and the pin state agrees across `pipeline.py`, the manifest (no digest or size while
-  unpinned), `README.md`, `MODEL_CARD.md`, `docs/WEIGHTS.md`, `STATUS.md` and this file (each says "not yet pinned"
-  while unpinned, and none may say it once pinned); an unpinned checkpoint can only be Candidate;
+  unpinned), `README.md`, `MODEL_CARD.md`, `docs/WEIGHTS.md`, `STATUS.md` and this file (each stated the pending pin
+  while unpinned, and none may do so once pinned); an unpinned checkpoint can only be Candidate;
 - every SHA-256 and byte count quoted in the weight documents comes from the manifest or a labelled allowlist entry;
 - forbidden patterns in the kernel and in every carried file (credential-in-URL, `git clone` / `github.com`, editable
   install, mutable revision, `trust_remote_code=True`, unsafe deserialization including any `torch.load` without
@@ -115,11 +115,11 @@ Google Colab's kernel and upload dialog; the full default field values (32 pairs
 
 ## Release gate (to be completed in order)
 
-1. **Pin the checkpoint.** In a runtime that reaches Dropbox (a Colab CPU runtime is enough): clone the repository,
+1. **Pin the checkpoint (done 2026-10-05).** Pinned on 2026-10-05 by running `python tools/pin_snapshot.py --dry-run` in a Google Colab runtime (Dropbox reachable): the extracted member is 44,617,876 bytes with SHA-256 `d22e84c0e431bf31d7cc66902c40601859eb40b35ef7f4399ea81276c2915819`, and it strict-loaded into the carried architecture (337 tensors, 11,116,176 parameters). The manifest and `MODEL_REVISION` were written from that output. Original procedure: in a runtime that reaches Dropbox (a Colab CPU runtime is enough): clone the repository,
    install the pins (`pip install torch==2.14.0 numpy==2.5.3 scipy==1.18.1 opt-einsum==3.4.0 safetensors==0.8.0
    pillow==11.3.0`), and run `python tools/pin_snapshot.py`. Check that the printed size is plausible (about 44.6 MB is
    expected from the architecture; see `docs/WEIGHTS.md`), that the strict load passed, and commit the manifest and
-   `pipeline.py` change. Then regenerate the notebook (`python tools/build_notebook.py`), replace every "not yet pinned"
+   `pipeline.py` change. Then regenerate the notebook (`python tools/build_notebook.py`), replace every pending-pin
    statement (README, MODEL_CARD, WEIGHTS, STATUS, this file) with the digest and byte size, and run `pytest` and
    `python tools/validate_release_assets.py`.
 2. **Hosted Run all.** Open the regenerated notebook at that commit in a fresh Colab **T4** runtime and choose

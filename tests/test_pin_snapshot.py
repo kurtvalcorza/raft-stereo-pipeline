@@ -77,10 +77,11 @@ def test_pin_records_the_checkpoint_digest_and_size(repo, tmp_path):
 
 
 def test_dry_run_writes_nothing(repo, tmp_path):
-    before = (repo / "src/raft_stereo_pipeline/pipeline.py").read_text()
+    manifest = repo / "weights/raftstereo-middlebury/dimer-base-manifest.json"
+    before, manifest_before = (repo / "src/raft_stereo_pipeline/pipeline.py").read_text(), manifest.read_text()
     assert _tool().pin(repo, archive=_archive(tmp_path / "models.zip", _checkpoint(repo)), dry_run=True) == 0
     assert (repo / "src/raft_stereo_pipeline/pipeline.py").read_text() == before
-    assert json.loads((repo / "weights/raftstereo-middlebury/dimer-base-manifest.json").read_text())["revision"] == "unpinned"
+    assert manifest.read_text() == manifest_before
 
 
 def test_a_checkpoint_that_does_not_load_strictly_pins_nothing(repo, tmp_path):
@@ -92,9 +93,11 @@ def test_a_checkpoint_that_does_not_load_strictly_pins_nothing(repo, tmp_path):
 
 
 def test_an_archive_without_the_member_pins_nothing(repo, tmp_path):
+    manifest = repo / "weights/raftstereo-middlebury/dimer-base-manifest.json"
+    manifest_before = manifest.read_text()
     archive = _archive(tmp_path / "models.zip", b"x", member="models/raftstereo-sceneflow.pth")
     assert _tool().pin(repo, archive=archive) == 1
-    assert json.loads((repo / "weights/raftstereo-middlebury/dimer-base-manifest.json").read_text())["revision"] == "unpinned"
+    assert manifest.read_text() == manifest_before
 
 
 def test_the_default_download_uses_the_manifest_url(repo, tmp_path):

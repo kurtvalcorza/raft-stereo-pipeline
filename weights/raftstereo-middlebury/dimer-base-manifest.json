@@ -3,15 +3,22 @@
   "formatVersion": 1,
   "modelKey": "raftstereo-middlebury",
   "modelId": "princeton-vl/RAFT-Stereo/raftstereo-middlebury",
-  "revision": "unpinned",
+  "revision": "d22e84c0e431bf31d7cc66902c40601859eb40b35ef7f4399ea81276c2915819",
   "files": [
     {
       "path": "raftstereo-middlebury.pth",
       "url": "https://www.dropbox.com/scl/fi/5khx1bhz84dapi8vtwapg/models.zip?rlkey=ggddrn1du1iiq6mgc2dsdpmwi&dl=1",
       "archiveMember": "raftstereo-middlebury.pth",
-      "bytes": null,
-      "sha256": null
+      "bytes": 44617876,
+      "sha256": "d22e84c0e431bf31d7cc66902c40601859eb40b35ef7f4399ea81276c2915819",
+      "archiveMemberPath": "raftstereo-middlebury.pth"
     }
   ],
-  "totalBytes": null
+  "totalBytes": 44617876,
+  "archiveAtPin": {
+    "url": "https://www.dropbox.com/scl/fi/5khx1bhz84dapi8vtwapg/models.zip?rlkey=ggddrn1du1iiq6mgc2dsdpmwi&dl=1",
+    "bytes": 201799175,
+    "sha256": "95c5dbbbbb6dd49e71c3fbe42d9e2252f9898666cfffb7ae2c9b68e5e8aa6455",
+    "note": "informational: the host may re-pack the archive; only the member's digest is verified"
+  }
 }

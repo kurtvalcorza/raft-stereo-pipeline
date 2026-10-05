@@ -4,7 +4,7 @@ model_card_spec: "1.2"
 pipeline_tag: depth-estimation
 base_model: princeton-vl/RAFT-Stereo/raftstereo-middlebury
 date_published: "2021-09-15"
-date_published_source: "date of upstream commit 5c13878 ('Initial Commit.'), the first public commit of princeton-vl/RAFT-Stereo; its README and download_models.sh already name raftstereo-middlebury.pth. Whether the bytes in today's models.zip equal that first release is not established: upstream changed the archive link in download_models.sh in 2023 (fa8ed9d) and 2026 (6e93ed2), and the checkpoint is not yet pinned."
+date_published_source: "date of upstream commit 5c13878 ('Initial Commit.'), the first public commit of princeton-vl/RAFT-Stereo; its README and download_models.sh already name raftstereo-middlebury.pth. Whether the bytes in today's models.zip equal that first release is not established: upstream changed the archive link in download_models.sh in 2023 (fa8ed9d) and 2026 (6e93ed2); the pin of 2026-10-05 records the bytes served then."
 ---
 
 # RAFT-Stereo (Middlebury checkpoint) — Dense Stereo Disparity with Bounded Fine-Tuning
@@ -17,7 +17,7 @@ date_published_source: "date of upstream commit 5c13878 ('Initial Commit.'), the
 > ⚠️ **Provided for research, training, and evaluation purposes only.** Model weights are obtained unmodified from the upstream release under their upstream license, which controls your use, including any commercial use or redistribution; the accompanying code and notebooks are released under this repository's license. All of it is supplied **"as is"**, without warranty of any kind, and has not been validated for production, clinical, or safety-critical use. Running the notebooks downloads third-party weights governed by their own licenses and consumes compute on your own Colab/Kaggle account. To the maximum extent permitted by law, the maintainers of this repository and the DIMER platform accept no liability for any damages arising from their use. Hosting implies no affiliation with or endorsement by the original authors.
 
 > [!IMPORTANT]
-> The upstream checkpoint is **not yet pinned**: `MODEL_REVISION` is `unpinned`, and the manifest records no SHA-256 and no byte size. Until `python tools/pin_snapshot.py` records them, every loader in this repository refuses to stage, verify or load the checkpoint, and the tutorial stops at its checkpoint section. No metric of this model has been measured by this repository yet: the Metrics sections describe what the code reports, not results.
+> The upstream checkpoint is pinned by its SHA-256 (`d22e84c0…5819`, 44,617,876 bytes); every loader verifies size and digest before reading it. No metric of this model has been measured by this repository yet: the Metrics sections describe what the code reports, not results.
 
 ---
 
@@ -25,7 +25,7 @@ date_published_source: "date of upstream commit 5c13878 ('Initial Commit.'), the
 
 - **End-to-end stereo disparity and adaptation notebook**:
   [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/kurtvalcorza/raft-stereo-pipeline/blob/main/tutorials/raft_stereo_colab.ipynb) [`raft_stereo_colab.ipynb`](https://github.com/kurtvalcorza/raft-stereo-pipeline/blob/main/tutorials/raft_stereo_colab.ipynb)
-  *Disparity on a rendered pair with exact ground truth next to OpenCV StereoSGBM, two probes with exact answers, a validated and split rendered dataset, three baselines on held-out pairs, a bounded fine-tune, held-out EPE and bad-pixel rates from the exported adapter in a fresh process, unseen-pair disparity export, and a fresh-process reload check. It runs in an isolated hash-locked environment and currently stops at the checkpoint section, because the checkpoint is not yet pinned.*
+  *Disparity on a rendered pair with exact ground truth next to OpenCV StereoSGBM, two probes with exact answers, a validated and split rendered dataset, three baselines on held-out pairs, a bounded fine-tune, held-out EPE and bad-pixel rates from the exported adapter in a fresh process, unseen-pair disparity export, and a fresh-process reload check. It runs in an isolated hash-locked environment and verifies the pinned checkpoint before any model runs.*
 
 ---
 
@@ -109,7 +109,7 @@ The pipeline reports, per pair and averaged over pairs (`disparity_metrics`, `ag
 
 Reading only `epe` hides whether errors are rare and large or common and small. Reading only a bad-pixel rate hides how wrong the failures are. Both are needed to compare a network with SGBM, whose unmatched pixels are filled and can be badly wrong. Every measure is printed next to three baselines scored on the same pixels: `median` (the training split's median disparity everywhere), `sgbm` (OpenCV StereoSGBM, with its matching density reported), and `pretrained` (the checkpoint before adaptation).
 
-**No value has been measured for this model yet.** The checkpoint is not yet pinned, and no hosted run exists. The local run recorded below used random weights, and its numbers are not reported because they say nothing about the model. Upstream benchmark values in the paper are reported by the upstream authors and were not reproduced here.
+**No value has been measured for this model yet.** The checkpoint is pinned, but no hosted run exists. The local run recorded below used random weights, and its numbers are not reported because they say nothing about the model. Upstream benchmark values in the paper are reported by the upstream authors and were not reproduced here.
 
 ###### Decision thresholds
 
@@ -177,9 +177,9 @@ The MIT licence of the upstream code and checkpoint imposes no use restrictions.
 | Item | Value |
 |---|---|
 | Model id | `princeton-vl/RAFT-Stereo/raftstereo-middlebury` |
-| Checkpoint revision (SHA-256 of `raftstereo-middlebury.pth`) | `unpinned` — not yet pinned |
+| Checkpoint revision (SHA-256 of `raftstereo-middlebury.pth`) | `d22e84c0e431bf31d7cc66902c40601859eb40b35ef7f4399ea81276c2915819` |
 | Checkpoint source | `https://www.dropbox.com/scl/fi/5khx1bhz84dapi8vtwapg/models.zip?rlkey=ggddrn1du1iiq6mgc2dsdpmwi&dl=1` (member `raftstereo-middlebury.pth`) |
-| Checkpoint size | not yet measured; 44,605,701 bytes expected from the carried architecture (an estimate; see `docs/WEIGHTS.md`) |
+| Checkpoint size | 44,617,876 bytes (measured at pin time) |
 | Upstream code | `princeton-vl/RAFT-Stereo` at `6e93ed2169bd858dbb43033988563f3b0bb49506`, carried and verified against `UPSTREAM_SHA256` |
 | Architecture | upstream demo defaults; 11,116,176 parameters, 337 state tensors |
 | Licence | MIT (upstream code and checkpoint); this repository's code Apache-2.0 |

@@ -5,7 +5,7 @@ DIMER-oriented pipeline for **RAFT-Stereo dense disparity and stereo depth estim
 ## Upstream alignment
 
 - Model: `princeton-vl/RAFT-Stereo/raftstereo-middlebury` — the checkpoint `raftstereo-middlebury.pth` from upstream's `models.zip` (the archive linked from `download_models.sh`), the checkpoint upstream recommends for in-the-wild images.
-- Checkpoint revision: `unpinned`. The checkpoint is **not yet pinned**: its SHA-256 and byte size have not been recorded, because the archive host (Dropbox) is not reachable from the environment this repository was built in. Until `python tools/pin_snapshot.py` records them, the package refuses to stage, verify or load the checkpoint, and the tutorial stops at Section 3. A URL-hosted file has no commit, so the pinned revision will be the SHA-256 of the checkpoint's own bytes.
+- Checkpoint revision: `d22e84c0e431bf31d7cc66902c40601859eb40b35ef7f4399ea81276c2915819`, the SHA-256 of the checkpoint's own bytes (a URL-hosted file has no commit). The checkpoint was pinned on 2026-10-05 by running `python tools/pin_snapshot.py --dry-run` in a Google Colab runtime (Dropbox reachable): the extracted member is 44,617,876 bytes with SHA-256 `d22e84c0e431bf31d7cc66902c40601859eb40b35ef7f4399ea81276c2915819`, and it strict-loaded into the carried architecture (337 tensors, 11,116,176 parameters). The manifest and `MODEL_REVISION` were written from that output. Every load verifies the size and digest first.
 - Model code: upstream `princeton-vl/RAFT-Stereo` `core/` at commit `6e93ed2169bd858dbb43033988563f3b0bb49506`, carried verbatim under `src/raft_stereo_pipeline/third_party/raft_stereo/` with its MIT licence. RAFT-Stereo is not on PyPI; the code is never cloned or downloaded at runtime, and `load_upstream()` refuses to import it unless every file matches `UPSTREAM_SHA256`.
 - Correlation: upstream's pure-PyTorch `corr_implementation = "reg"`. The optional CUDA sampler extension is never built, so the same code runs on a CUDA GPU or a CPU.
 - Upstream licence: **MIT** (code and checkpoints, Princeton Vision & Learning Lab).
@@ -78,7 +78,7 @@ Recompile it and regenerate the notebook whenever a pin changes.
 
 ## Release status
 
-**Candidate** — initial development. The checkpoint is not yet pinned and no hosted (Colab/Kaggle) execution of the notebook has been recorded. The default path executed end to end on a local CPU with a random-weight stand-in checkpoint (plumbing evidence only); see `STATUS.md` and `docs/release-verification.md` for exactly what was and was not run.
+**Candidate** — initial development. The checkpoint is pinned (44,617,876 bytes, SHA-256 `d22e84c0…5819`), but no hosted (Colab/Kaggle) `Run all` of the notebook has been recorded yet. The default path executed end to end on a local CPU with a random-weight stand-in checkpoint (plumbing evidence only); see `STATUS.md` and `docs/release-verification.md` for exactly what was and was not run.
 
 ## Licensing
 
