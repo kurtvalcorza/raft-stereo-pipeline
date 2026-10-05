@@ -109,7 +109,7 @@ The pipeline reports, per pair and averaged over pairs (`disparity_metrics`, `ag
 
 Reading only `epe` hides whether errors are rare and large or common and small. Reading only a bad-pixel rate hides how wrong the failures are. Both are needed to compare a network with SGBM, whose unmatched pixels are filled and can be badly wrong. Every measure is printed next to three baselines scored on the same pixels: `median` (the training split's median disparity everywhere), `sgbm` (OpenCV StereoSGBM, with its matching density reported), and `pretrained` (the checkpoint before adaptation).
 
-Measured in one Google Colab T4 run of the tutorial with the pinned checkpoint (8 held-out rendered pairs, 32 refinement iterations; see Verification records):
+Measured in a Google Colab T4 run of the tutorial with the pinned checkpoint (8 held-out rendered pairs, 32 refinement iterations; see Verification records); a second, clean one-pass run reproduced every value except the adapted `bad_3px` and `d1_all`, 0.0046:
 
 | Method | `epe` (px) | `bad_1px` | `bad_3px` | `d1_all` |
 |---|---|---|---|---|
@@ -118,7 +118,7 @@ Measured in one Google Colab T4 run of the tutorial with the pinned checkpoint (
 | pretrained | 0.2310 | 0.0122 | 0.0079 | 0.0079 |
 | adapted (36 steps, encoders frozen) | 0.1117 | 0.0086 | 0.0045 | 0.0045 |
 
-The adapted model's EPE was lower on 8 of 8 held-out pairs and on 3 of 3 unseen pairs. These are tutorial-sample values on rendered scenes from one seed, not benchmark results. On a degenerate probe of two identical random-dot images (true disparity 0) the pretrained checkpoint returned a median of 235.2 px, while an 8 px shifted probe returned 8.001 px. The cause was not investigated; the tutorial now probes shifts of 2 px and 8 px instead. Upstream benchmark values in the paper are reported by the upstream authors and were not reproduced here.
+The adapted model's EPE was lower on 8 of 8 held-out pairs and on 3 of 3 unseen pairs. These are tutorial-sample values on rendered scenes from one seed, not benchmark results. On a degenerate probe of two identical random-dot images (true disparity 0) the pretrained checkpoint returned a median of 235.2 px, while an 8 px shifted probe returned 8.001 px. A diagnostic sweep then showed that the checkpoint reads every uniform random-dot shift of 0–4 px wildly wrong (medians 128–367 px) at dot sizes of 1–8 px, and reads 8 px and 16 px exactly; rendered scenes with small disparities are read well. The cause was not investigated; the tutorial probes 8 px and 16 px. Upstream benchmark values in the paper are reported by the upstream authors and were not reproduced here.
 
 ###### Decision thresholds
 
@@ -202,6 +202,14 @@ The MIT licence of the upstream code and checkpoint imposes no use restrictions.
 - `save_artifact(path)` / `load_artifact(path)` write and read the SafeTensors adapter (format `raft-stereo-adapter-v1`).
 
 ## Verification records
+
+- **Date:** 2026-10-05
+- **Subject:** `tutorials/raft_stereo_colab.ipynb`, blob `c9bd882` at commit `f0d56f1` (2 px and 8 px probes), with the pinned checkpoint
+- **Runtime:** fresh Google Colab runtime, Tesla T4; kernel CPython 3.13.15; isolated environment CPython 3.12.12, `torch 2.14.0+cu130` with CUDA
+- **Procedure:** `Run all` with no field edited, one pass (execution counts 1–14)
+- **Observed result:** every stage completed without error; held-out values as in Performance Measures; reload parity exact; the 2 px probe was read as 149.8 px and the 8 px probe as 8.001 px. The executed copy is in `docs/execution-evidence/2026-10-05/`
+- **Caveats:** the 2 px probe failure led to the 8 px and 16 px probes of the current notebook, which has not yet been run on a hosted runtime; BYOD branches not run
+
 
 - **Date:** 2026-10-05
 - **Subject:** `tutorials/raft_stereo_colab.ipynb`, blob `b6ffed7` at commit `49e50cc`, with the pinned checkpoint

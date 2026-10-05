@@ -158,6 +158,17 @@ Google Colab's kernel and upload dialog; the full default field values (32 pairs
   - Sections 7–8 (held-out 8 pairs, 32 iterations; adapter reloaded in a fresh process): EPE / bad-3px — median 8.223 / 0.632, SGBM 0.653 / 0.028, pretrained 0.231 / 0.0079, adapted 0.112 / 0.0045; the adapted model's EPE was lower on 8 of 8 pairs. Fine-tuning: encoders frozen, 5,728,144 of 11,116,176 parameters trainable, 36 steps, batch 2, lr 2e-5, float32, 21.9 s; adapter 22,917,592 bytes, 42 tensors.
   - Section 9 (three unseen scenes): adapted EPE 0.084, 0.118, 0.079 px against pretrained 0.137, 0.174, 0.162; lower on 3 of 3.
   - Section 10: reload parity exact (mean and max absolute difference 0.0 px; held-out EPE 0.11171624 in memory and in a fresh process).
-- **Follow-up:** Section 5 was changed after this run to probe shifts of 2 px and 8 px (notebook blob `c9bd882`), because the identical-image probe tests a degenerate case this checkpoint mis-reads rather than the pipeline's wiring. The revised notebook needs its own hosted run.
+- **Follow-up:** Section 5 was changed after this run, first to 2 px and 8 px probes (blob `c9bd882`, recorded below) and then to 8 px and 16 px probes (blob `44474b8`) after a diagnostic sweep.
 - **Caveats:** this was not a strict one-pass, clean-state `Run all`. Execution counts start at 2 and the run directory sits inside a clone of this repository (the session that ran the pin dry run), and counts 13–15 are missing between the `infer` and `reload` cells, so three other executions took place in between. The recorded outputs are complete and consistent, and the notebook verifies its own carried code and checkpoint, but REL1/REL2 should be confirmed by a fresh-runtime run. The BYOD branches were not run (REL12 open). The zero-disparity probe result above is unexplained. One seed; the rendered sample is tutorial evidence, not a benchmark.
 
+
+### 2026-10-05 — Google Colab T4, clean one-pass `Run all` of blob `c9bd882`
+
+- **Subject:** `tutorials/raft_stereo_colab.ipynb`, blob `c9bd882428f4220f4dc08d9c9f2a6cd3dc606dff` at commit `f0d56f1` (probes of 2 px and 8 px; carried files labelled with the parent `95db0ef`). Source cells byte-identical to that blob. Executed copy: `docs/execution-evidence/2026-10-05/raft_stereo_colab_c9bd882_colab-t4.ipynb`.
+- **Runtime and procedure:** fresh Google Colab runtime, Tesla T4, kernel CPython 3.13.15; `Run all` with no field edited; execution counts 1–14 in order, outputs under `/content/outputs/`; isolated environment built in 62 s.
+- **Observed result:** every stage completed without error. Checkpoint downloaded and verified (6.5 s). Demonstration pair: RAFT-Stereo EPE 0.158, SGBM 0.469. Probes: 2 px read as a median of 149.8 px (EPE 147.2), 8 px as 8.001 px (EPE 0.032). Held-out (8 pairs): median 8.223 / 0.632, SGBM 0.653 / 0.028, pretrained 0.231 / 0.0079, adapted 0.112 / 0.0046 (EPE / bad-3px); adapted lower on 8 of 8. Unseen pairs: adapted lower on 3 of 3. Reload parity exact (0.0 px).
+- **Caveats:** the 2 px probe failed, contradicting the notebook's guidance for that blob; this led to the diagnostic below and to the 8 px / 16 px probes. BYOD not run (REL12 open).
+
+### 2026-10-05 — random-dot probe diagnostic (outside the tutorial)
+
+A sweep of uniform random-dot shifts (0, 1, 2, 4, 8, 16 px) against dot sizes (1, 2, 4, 8 px), run with the pinned checkpoint in Colab through `RaftStereoPipeline.from_pretrained` at `f0d56f1`. Every shift of 0–4 px failed at every dot size (medians 128–367 px); 8 px and 16 px were exact (EPE ≤ 0.032 px). Table: `docs/execution-evidence/2026-10-05/probe_shift_diagnostic.md`.

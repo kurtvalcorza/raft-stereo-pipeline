@@ -34,8 +34,7 @@ from typing import Any
 STEM = "raft_stereo"
 DEMO_SEED = 7
 DEMO_SGBM_RANGE = 64  # the sample contract's disparity range (at most 40 px) rounded up to a multiple of 16, plus margin
-PROBE_SMALL_SHIFT = 2
-PROBE_SHIFT = 8
+PROBE_SHIFTS = (8, 16)  # uniform random-dot shifts this checkpoint reads exactly; 0-4 px fail (docs/execution-evidence/2026-10-05/probe_shift_diagnostic.md)
 N_NEW_PAIRS = 3
 RELOAD_TOLERANCE_PX = {"mean_abs": 1e-3, "max_abs": 1e-2}
 
@@ -264,7 +263,7 @@ def stage_demo(run: Run) -> None:
 
 
 def stage_probes(run: Run) -> None:
-    """Section 5: two random-dot pairs whose answer is known exactly — shifted by 2 px and by 8 px."""
+    """Section 5: two random-dot pairs whose answer is known exactly — shifted by 8 px and by 16 px."""
     import numpy as np
 
     from raft_stereo_pipeline import disparity_metrics, random_dot_pair
@@ -272,7 +271,7 @@ def stage_probes(run: Run) -> None:
     iters = run.options.iters
     pipe = load_base(run)
     rows = []
-    for shift in (PROBE_SMALL_SHIFT, PROBE_SHIFT):
+    for shift in PROBE_SHIFTS:
         pair = random_dot_pair(shift)
         disparity = pipe.estimate(pair["left"], pair["right"], iters=iters)["disparity"]
         valid = pair["valid"]

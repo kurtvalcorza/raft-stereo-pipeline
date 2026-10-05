@@ -78,7 +78,7 @@ Recompile it and regenerate the notebook whenever a pin changes.
 
 ## Release status
 
-**Candidate** — initial development. The checkpoint is pinned (44,617,876 bytes, SHA-256 `d22e84c0…5819`), and a Google Colab T4 execution with the real checkpoint completed every stage on 2026-10-05 (held-out EPE 0.231 px pretrained, 0.112 px adapted, 0.653 px SGBM). That run was not strictly clean-state, and its zero-disparity probe failed; Section 5 now probes 2 px and 8 px shifts and awaits a fresh hosted run (see `STATUS.md`). The default path executed end to end on a local CPU with a random-weight stand-in checkpoint (plumbing evidence only); see `STATUS.md` and `docs/release-verification.md` for exactly what was and was not run.
+**Candidate** — initial development. The checkpoint is pinned (44,617,876 bytes, SHA-256 `d22e84c0…5819`), and a Google Colab T4 execution with the real checkpoint completed every stage on 2026-10-05 (held-out EPE 0.231 px pretrained, 0.112 px adapted, 0.653 px SGBM). That run was not strictly clean-state, and small random-dot probes (0–4 px) turned out to be unreadable by this checkpoint, so Section 5 now probes 8 px and 16 px and awaits a fresh hosted run (see `STATUS.md`). The default path executed end to end on a local CPU with a random-weight stand-in checkpoint (plumbing evidence only); see `STATUS.md` and `docs/release-verification.md` for exactly what was and was not run.
 
 ## Licensing
 
