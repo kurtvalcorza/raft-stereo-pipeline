@@ -228,7 +228,8 @@ MODES = ("REFERENCE", "GUIDED", "WORKSHOP")
 
 # ---- infrastructure cell sources -------------------------------------------------------------------------------------
 
-CHECK_CELL = """# @title Infrastructure: check the runtime, GPU and disk; create a fresh run directory
+CHECK_CELL = """# @title Infrastructure: check the runtime, GPU and disk; create or keep this session's run directory
+NEW_RUN_DIRECTORY = False  # @param {{type:"boolean"}}
 import hashlib
 import json
 import os
@@ -245,13 +246,24 @@ if platform.system() != 'Linux' or platform.machine() != 'x86_64':
     raise RuntimeError('This notebook needs a Linux x86_64 GPU runtime (Google Colab or Kaggle with a T4 or better): its locked environment is built for manylinux x86_64.')
 {gpu_check}
 STEM = {stem!r}
-ROOT = Path.cwd() / 'outputs' / STEM / uuid.uuid4().hex[:12]
-ROOT.mkdir(parents=True)
+RUNS = Path.cwd() / 'outputs' / STEM
+# Re-running this cell on its own keeps the run directory of this session, so the cells after it keep working; only a
+# new kernel (or NEW_RUN_DIRECTORY) starts a fresh one, which then needs Sections 2 and 3 again.
+previous_root = globals().get('ROOT')
+if not NEW_RUN_DIRECTORY and isinstance(previous_root, Path) and previous_root.parent == RUNS and previous_root.is_dir():
+    ROOT = previous_root
+    print('Keeping the run directory of this session:', ROOT, '(tick NEW_RUN_DIRECTORY for a fresh one, then run Sections 2 and 3 again).')
+else:
+    ROOT = RUNS / uuid.uuid4().hex[:12]
+    ROOT.mkdir(parents=True)
 WEIGHTS = Path.cwd() / 'weights'
 WEIGHTS.mkdir(exist_ok=True)
-ENV_ROOT = Path(tempfile.gettempdir()) / (STEM + '_env_' + ROOT.name)
+# The isolated environment is keyed on the lock digest, the managed Python and the uv version, not on the run: a later
+# Run all in the same runtime reuses a complete environment built from the same lock instead of building another.
+ENV_KEY = {env_key!r}
+ENV_ROOT = Path(tempfile.gettempdir()) / (STEM + '_env_' + ENV_KEY)
 staged_gib = sum(p.stat().st_size for p in WEIGHTS.rglob('*') if p.is_file()) / 1024**3
-need = {{'weights': max(0.0, {weights_gib} - staged_gib), 'environment': {env_gib}}}
+need = {{'weights': max(0.0, {weights_gib} - staged_gib), 'environment': 0.0 if (ENV_ROOT / 'ready.json').is_file() else {env_gib}}}
 free = {{'weights': shutil.disk_usage(WEIGHTS).free / 1024**3, 'environment': shutil.disk_usage(tempfile.gettempdir()).free / 1024**3}}
 if os.stat(WEIGHTS).st_dev == os.stat(tempfile.gettempdir()).st_dev:
     short = free['weights'] < need['weights'] + need['environment']
@@ -284,39 +296,53 @@ from IPython.display import Image, display
 UV_URL = {uv_url!r}
 UV_BYTES = {uv_bytes}
 UV_SHA256 = {uv_sha256!r}
-for attempt in range(3):
-    try:
-        with urllib.request.urlopen(UV_URL, timeout=90) as response:
-            wheel = response.read(UV_BYTES + 1)
-        break
-    except (urllib.error.URLError, TimeoutError, ConnectionError):
-        if attempt == 2:
-            raise
-        time.sleep(2 ** attempt)
-if len(wheel) != UV_BYTES or hashlib.sha256(wheel).hexdigest() != UV_SHA256:
-    raise RuntimeError('uv {uv_version} wheel size/hash mismatch: refusing to run it')
-ENV_ROOT.mkdir(parents=True, exist_ok=True)
-with zipfile.ZipFile(io.BytesIO(wheel)) as archive:
-    member = next(n for n in archive.namelist() if n.endswith('.data/scripts/uv'))
-    UV = ENV_ROOT / 'uv'
-    UV.write_bytes(archive.read(member))
-UV.chmod(0o700)
 # The stage processes get no Hugging Face token (every download is public) and no kernel Python path. The kernel may
 # export an inline matplotlib backend that the isolated environment cannot import; stages write figures to files.
 ENV = dict(os.environ, HF_HUB_DISABLE_IMPLICIT_TOKEN='1', HF_HUB_DISABLE_TELEMETRY='1', DO_NOT_TRACK='1', UV_CACHE_DIR=str(ENV_ROOT / 'cache'), MPLBACKEND='Agg')
-for name in ('HF_TOKEN', 'HUGGING_FACE_HUB_TOKEN', 'PYTHONPATH', 'PYTHONHOME'):
+for name in ('HF_TOKEN', 'HUGGING_FACE_HUB_TOKEN', 'PYTHONPATH', 'PYTHONHOME', 'PYTHONSTARTUP'):
     ENV.pop(name, None)
-subprocess.run([str(UV), 'venv', '--managed-python', '--python', {python!r}, str(ENV_ROOT / 'venv')], env=ENV, check=True)
 PYTHON = ENV_ROOT / 'venv' / 'bin' / 'python'
-subprocess.run([str(UV), 'pip', 'install', '--python', str(PYTHON), '--require-hashes', '--only-binary', ':all:', '--index-url', 'https://pypi.org/simple', '-r', str(ROOT / {lock!r})], env=ENV, check=True)
+ENV_SPEC = {{'lock_sha256': CARRIED_HASHES[{lock!r}], 'python': {python!r}, 'uv': {uv_version!r}}}
+try:
+    ENV_REUSED = PYTHON.is_file() and json.loads((ENV_ROOT / 'ready.json').read_text(encoding='utf-8')) == ENV_SPEC
+except (OSError, ValueError):
+    ENV_REUSED = False
+if ENV_REUSED:
+    print('Reusing the isolated environment built earlier in this runtime from the same lock:', ENV_ROOT / 'venv')
+else:
+    (ENV_ROOT / 'ready.json').unlink(missing_ok=True)
+    shutil.rmtree(ENV_ROOT / 'venv', ignore_errors=True)
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(UV_URL, timeout=90) as response:
+                wheel = response.read(UV_BYTES + 1)
+            break
+        except (urllib.error.URLError, TimeoutError, ConnectionError):
+            if attempt == 2:
+                raise
+            time.sleep(2 ** attempt)
+    if len(wheel) != UV_BYTES or hashlib.sha256(wheel).hexdigest() != UV_SHA256:
+        raise RuntimeError('uv {uv_version} wheel size/hash mismatch: refusing to run it')
+    ENV_ROOT.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(io.BytesIO(wheel)) as archive:
+        member = next(n for n in archive.namelist() if n.endswith('.data/scripts/uv'))
+        UV = ENV_ROOT / 'uv'
+        UV.write_bytes(archive.read(member))
+    UV.chmod(0o700)
+    subprocess.run([str(UV), 'venv', '--managed-python', '--python', {python!r}, str(ENV_ROOT / 'venv')], env=ENV, check=True)
+    subprocess.run([str(UV), 'pip', 'install', '--python', str(PYTHON), '--require-hashes', '--only-binary', ':all:', '--index-url', 'https://pypi.org/simple', '-r', str(ROOT / {lock!r})], env=ENV, check=True)
+    # Written last: an interrupted build leaves no marker and is rebuilt from scratch by the next run of this cell.
+    (ENV_ROOT / 'ready.json').write_text(json.dumps(ENV_SPEC), encoding='utf-8')
 probe = subprocess.run([str(PYTHON), '-c', {probe!r}], env=ENV, check=True, capture_output=True, text=True)
 RUNTIME = json.loads(probe.stdout.strip().splitlines()[-1])
-print({{'notebook_source': NOTEBOOK_SOURCE['revision'], **RUNTIME, 'locked_packages': {n_locked}, 'environment': str(ENV_ROOT / 'venv'), 'setup_seconds': round(time.perf_counter() - SESSION_START)}})
+print({{'notebook_source': NOTEBOOK_SOURCE['revision'], **RUNTIME, 'locked_packages': {n_locked}, 'environment': str(ENV_ROOT / 'venv'), 'environment_reused': ENV_REUSED, 'setup_seconds': round(time.perf_counter() - SESSION_START)}})
 {cuda_check}
 
 
 def run_stage(stage, *options):
     \"\"\"Run one stage of the carried runner in its own process with the isolated interpreter; stream its output.\"\"\"
+    if not (ROOT / {runner!r}).is_file() or not PYTHON.is_file():
+        raise RuntimeError('The run directory ' + str(ROOT) + ' has no carried files, or the isolated environment is gone: run the three Infrastructure cells again in order (Sections 1, 2 and 3), then this cell, or choose Runtime -> Run all.')
     log = ROOT / 'logs' / (stage + '.log')
     log.parent.mkdir(exist_ok=True)
     error_file = ROOT / 'state' / (stage + '.error.json')
@@ -352,6 +378,12 @@ def show_image(name, caption=None):
 
 WEIGHTS_CELL = """# @title Infrastructure: verify the carried upstream source; stage and digest-verify the pinned checkpoint
 run_stage('weights')"""
+
+
+def environment_key(ctx: dict[str, Any], template: dict[str, Any]) -> str:
+    """Directory key of the isolated environment: the lock digest, the managed Python and the uv version (not the run)."""
+    basis = "\n".join((ctx["hashes"][template["lock"]], template["managed_python"], template["uv"]["version"]))
+    return hashlib.sha256(basis.encode("utf-8")).hexdigest()[:16]
 
 
 def _probe(modules: list[str]) -> str:
@@ -390,7 +422,7 @@ def _infrastructure_code(key: str, ctx: dict[str, Any], template: dict[str, Any]
     required = _accelerator(template) == "required"
     if key == "check":
         disk = template["disk_gib"]
-        return CHECK_CELL.format(stem=template["stem"], weights_gib=float(disk["weights"]), env_gib=float(disk["environment"]), gpu_check=GPU_REQUIRED if required else GPU_RECOMMENDED)
+        return CHECK_CELL.format(stem=template["stem"], weights_gib=float(disk["weights"]), env_gib=float(disk["environment"]), gpu_check=GPU_REQUIRED if required else GPU_RECOMMENDED, env_key=environment_key(ctx, template))
     if key == "carrier":
         return CARRIER_CELL.format(files=repr(ctx["files"]), hashes=repr(ctx["hashes"]), source=SOURCE_RECORD)
     if key == "install":

@@ -1,4 +1,5 @@
 import builtins
+import importlib.util
 import sys
 from pathlib import Path
 
@@ -9,6 +10,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from raft_stereo_pipeline import pipeline as pipeline_module  # noqa: E402
 
 TEST_REVISION = "0123456789abcdef" * 4
+
+# These modules import torch at module level; without torch (a lightweight check) they are skipped, not collection errors.
+collect_ignore = [] if importlib.util.find_spec("torch") else ["test_tiny_model.py", "test_pin_snapshot.py"]
 
 
 @pytest.fixture

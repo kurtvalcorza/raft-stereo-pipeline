@@ -63,12 +63,14 @@ TEMPLATE = {
         "pillow and their dependencies) without touching the notebook kernel's own packages, then runs each stage below in its own "
         "process: it verifies the carried upstream RAFT-Stereo source against its SHA-256 digests, stages and digest-verifies the "
         "pinned Middlebury checkpoint (Section 3 refuses to load a checkpoint whose SHA-256 is not pinned), runs the pretrained model "
-        "on a rendered demonstration pair and two probes with exact answers, renders and validates a 32-pair dataset with exact "
+        "on a rendered demonstration pair, two probes with exact answers and three small-shift probes that show a known failure, renders and validates a 32-pair dataset with exact "
         "ground-truth disparity and splits it 24 / 8, scores three baselines on the held-out pairs, **runs a bounded fine-tune**, "
         "scores the exported adapter in a fresh process, runs the adapted model on three unseen pairs and exports their disparity "
         "maps, and reloads the adapter in another fresh process to check that it reproduces the trained model. Nothing is skipped "
         "behind a default-off flag, and no clone, DIMER worker, credential, upload dialog or configuration edit is needed, and no restart "
-        "(NOTEBOOK_SPEC 2.2 §5, RUN7, FT2)."
+        "(NOTEBOOK_SPEC 2.2 §5, RUN7, FT2). The recorded hosted run (Google Colab, Tesla T4, 5 October 2026, default fields, notebook "
+        "generated from revision `ac3cc07`) built the isolated environment in 68 s and spent about 94 s in the model stages; a second "
+        "**Run all** in the same runtime reuses that environment."
     ),
     "byod": (
         "Two optional branches in Section 13 are off by default (`USE_BYOD_PAIR = False`, `USE_BYOD_DATASET = False`). The **pair** "
@@ -124,7 +126,7 @@ TEMPLATE = {
         "augmentation, mixed precision, 200,000 steps on two GPUs); and the faster CUDA correlation kernels."
     ),
     "prerequisites": [
-        "- **Runtime:** a fresh **Linux x86_64** runtime: Google Colab or Kaggle with a **T4 GPU** (the documented runtime), or a Linux Jupyter kernel. The kernel's own Python version does not matter: the notebook installs nothing into it and runs every stage with CPython 3.12.12 in an isolated environment built from {n_locked} hash-locked packages (torch 2.14.0, whose Linux wheel is the CUDA 13.0 build). A **CPU-only runtime also completes the default path, more slowly**: in a local 4-thread CPU check (Linux container, nothing else running, random weights), one 32-iteration inference on a 320 × 224 pair took 3.3 s and one 12-iteration training step on two pairs 10 s, so the default path's stages need roughly 10–20 minutes on 2–4 CPU threads after the environment is built (an estimate from those two measurements). Hosted-runtime times have not been measured yet for this revision. Everything runs in float32. About 1 GiB of disk is needed for the checkpoint download and about 8 GiB for the isolated environment.",
+        "- **Runtime:** a fresh **Linux x86_64** runtime: Google Colab or Kaggle with a **T4 GPU** (the documented runtime), or a Linux Jupyter kernel. The kernel's own Python version does not matter: the notebook installs nothing into it and runs every stage with CPython 3.12.12 in an isolated environment built from {n_locked} hash-locked packages (torch 2.14.0, whose Linux wheel is the CUDA 13.0 build). A **CPU-only runtime also completes the default path, more slowly**: in a local 4-thread CPU check (Linux container, nothing else running, random weights), one 32-iteration inference on a 320 × 224 pair took 3.3 s and one 12-iteration training step on two pairs 10 s, so the default path's stages need roughly 10–20 minutes on 2–4 CPU threads after the environment is built (an estimate from those two measurements). **Measured on the documented runtime:** in the recorded hosted run (Google Colab, Tesla T4, 5 October 2026, default fields, notebook generated from revision `ac3cc07`; see `docs/release-verification.md`) the environment was built in 68 s and the stages took: weights 12.5 s, demo 5.6 s, probes 3.5 s, prepare 5.3 s, baselines 8.9 s, adapt 31.9 s (23.0 s of training), evaluate 9.5 s, infer 9.4 s, reload 7.1 s. Everything runs in float32. Disk (estimates, not measured): about 1 GiB for the checkpoint download and about 8 GiB for the isolated environment.",
         "- **Learner:** basic Python and NumPy, and Colab or Jupyter familiarity. No prior experience with stereo vision or fine-tuning is assumed; disparity, rectification, occlusion, the correlation volume, refinement iterations, EPE, bad-pixel rates and SGBM are explained where they first appear and again in the glossary.",
         "- **Model and code:** the model code is upstream `princeton-vl/RAFT-Stereo` `core/` at commit `6e93ed2169bd858dbb43033988563f3b0bb49506` (MIT), carried verbatim and verified file by file. The checkpoint `raftstereo-middlebury.pth` is a pickle-based PyTorch `state_dict` from upstream's `models.zip`; it is loaded only after its byte size and SHA-256 match the carried manifest, and only with `torch.load(..., weights_only=True)`. No remote code is fetched or executed.",
         "- **Data contract:** a record is a rectified pair (two images of one size, each side 64..1280 px, at most 1280 × 1024 pixels) with a ground-truth disparity map for the **left** image in pixels and an optional valid mask. Disparity files may be `.pfm` (Middlebury, ETH3D; `inf` = unknown), `.npy`, or 16-bit `.png` (KITTI convention, value / 256, 0 = unknown); ground truth at or above 512 px is not scored, and a negative disparity is refused (it usually means left and right are swapped). For BYOD, `pairs.json` lists `{{\"left\", \"right\", \"disparity\", \"valid\"?, \"group\"?}}` objects with file names relative to the folder.",
@@ -164,8 +166,9 @@ TEMPLATE = {
                 "details.\n\n"
                 "**Running it.** In Colab, choose *Runtime → Change runtime type → T4 GPU*, then *Runtime → Run all*. The default path "
                 "needs no edit, no upload, no account, no token and no runtime restart. Sections 1–3 build an isolated environment from "
-                "hash-locked packages and download the checkpoint archive, so they take the longest before any model runs; read ahead "
-                "while they finish.\n\n"
+                "hash-locked packages and download the checkpoint archive before any model runs (about 80 s in the recorded T4 run; a "
+                "later Run all in the same runtime reuses the environment); read ahead while they finish. Re-running the Section 1 cell "
+                "on its own is safe: it keeps this session's run directory, so the cells after it keep working.\n\n"
                 "**Where the code runs.** The notebook kernel installs nothing and imports no model library. Each learner cell calls "
                 "`run_stage('…')`, which runs one stage of the carried stage runner in its own process with the isolated environment's "
                 "Python, streams what it prints, and stops the notebook with the stage's own error message if it fails. Stages hand "
@@ -178,7 +181,8 @@ TEMPLATE = {
                 "knowledge.\n\n"
                 "**Form controls.** Some learner cells start with fields that Colab renders as a form: `VALID_ITERS` (Section 4); "
                 "`N_PAIRS`, `DATASET_SEED`, `HOLDOUT`, `SEED` and `EPOCHS` (Section 6); `LEARNING_RATE`, `BATCH_SIZE`, `TRAIN_ITERS` and "
-                "`FREEZE_ENCODERS` (Section 8); `NEW_DATA_SEED` (Section 10); and the BYOD switches and locations (Section 13). Leave "
+                "`FREEZE_ENCODERS` (Section 8); `NEW_DATA_SEED` (Section 10); and the BYOD switches and locations (Section 13). The Section 1 "
+                "infrastructure cell has one more, `NEW_RUN_DIRECTORY`, off by default. Leave "
                 "them at their defaults for the first run. Changing a field and choosing *Runtime → Run after* from that cell is how you "
                 "experiment afterwards.\n\n"
                 "**Section tags.** Each numbered heading carries one tag. **[Concept]** — what the model does and why. **[Evaluation "
@@ -186,8 +190,8 @@ TEMPLATE = {
                 "packaging.\n\n"
                 "**Predict, then check.** Before each principal result a **Predict before running** prompt asks you to commit to an "
                 "expectation; after it, **What to notice** describes normal output and a collapsed **Check your reasoning** block gives "
-                "worked guidance. Write your own answer first, then open it. The notes describe the shape of a normal result rather than "
-                "fixed numbers: this revision has no recorded hosted run, and exact values vary with the runtime."
+                "worked guidance. Write your own answer first, then open it. Where a note quotes numbers, they come from the recorded Colab "
+                "T4 run of an earlier revision with the same stages (`docs/release-verification.md`); your values vary with the runtime."
             ),
             (
                 "## The task: Input → Model/System → Output\n\n"
@@ -390,7 +394,7 @@ TEMPLATE = {
                 "has anything to match; SGBM's unmatched pixels there are filled from a row neighbour, which is often wrong. If your "
                 "run shows the opposite ordering, that is a finding about this checkpoint on this rendered domain — note it; it is "
                 "what Sections 7–9 measure properly on held-out pairs.</details>\n\n"
-                "## 5. Probes with exact answers: random dots shifted by 8 px and by 16 px · [Evaluation practice]\n\n"
+                "## 5. Probes with exact answers, and a known failure at 0–4 px · [Evaluation practice]\n\n"
                 "Before trusting any score, check that the model's output means what you think it means. Two random-dot pairs have an "
                 "answer that is known exactly and needs no rendering model at all:\n\n"
                 "- **a shift of 8 px**: the right image is the left image moved 8 px, so the true disparity is **8** everywhere (the left "
@@ -400,13 +404,21 @@ TEMPLATE = {
                 "A wrong sign would show up as medians near −8 and −16, a scale error as a ratio between the two medians far from 2, and "
                 "a constant bias as both medians off by the same amount. Random dots are not natural images, so a small error here says "
                 "nothing about scenes; a large one says the pipeline is wired wrongly.\n\n"
-                "**Why not a smaller shift?** A diagnostic run of this checkpoint on the same kind of random-dot pairs read every "
-                "uniform shift of 0, 1, 2 or 4 px wildly wrong (medians between about 130 and 370 px) at every dot size from 1 to 8 px, "
-                "while it read 8 px and 16 px exactly. Rendered scenes with disparities of 2 px and more are read well, so this is a "
-                "limitation on small uniform whole-frame shifts of random dots, not of small disparities in general; its cause was not "
-                "investigated. The diagnostic table is in the repository under `docs/execution-evidence/2026-10-05/`.\n\n"
-                "**Predict before running:** what median disparity will the model report for each probe, and will its 5th–95th "
-                "percentile range be narrow (under 1 px) or wide?"
+                "**The known failure, shown rather than hidden.** The same stage then runs three more random-dot pairs: shifts of **0 px** "
+                "(two identical images — the right answer is 0 everywhere), **2 px** and **4 px**, each printed with a `verdict`. In the "
+                "recorded diagnostic (Colab T4, the pinned checkpoint through this pipeline; table in "
+                "`docs/execution-evidence/2026-10-05/`) every uniform shift of 0, 1, 2 or 4 px was read wildly wrong — medians between "
+                "about 130 and 370 px, on an image 320 px wide — at every dot size from 1 to 8 px, while 8 px and 16 px were read exactly. "
+                "Expect `FAILED` verdicts for these three; they never stop the notebook.\n\n"
+                "What is and is not known: **the cause has not been determined.** It may lie in the checkpoint or in this pipeline (for "
+                "example in how tensors are prepared or padded); separating the two needs a hosted run of upstream's own `demo.py` on the "
+                "same pairs, which has not been recorded. Every scene the notebook renders keeps its disparity at **2 px or more** (the "
+                "renderer's floor), and those scenes are read well — so **nothing here shows how the model behaves on real or rendered "
+                "content with disparity between 0 and 2 px**, such as a distant background or the sky. Until that is measured, treat any "
+                "region of your own data that should be near zero disparity as suspect (Section 13 repeats this warning). The 8 px and "
+                "16 px pairs remain the wiring checks: they test sign and scale, which the failing shifts cannot.\n\n"
+                "**Predict before running:** what median disparity will the model report for the 8 px and 16 px probes, and will its "
+                "5th–95th percentile range be narrow (under 1 px) or wide? And for the identical-image pair, what *should* it report?"
             ),
             "code": "run_stage('probes', '--iters', VALID_ITERS)",
         },
@@ -419,7 +431,10 @@ TEMPLATE = {
                 "pixel scale. In recorded Colab T4 runs this checkpoint read 8 px as 8.001 px (EPE 0.032) and, in the diagnostic, 16 px "
                 "as 16.01 px (EPE 0.03). Random dots are an easy, perfectly textured case, so EPE well below 1 px is normal; medians "
                 "near −8 and −16 would mean left and right were swapped, which is exactly the mistake `validate_dataset` guards "
-                "against in Section 6.</details>\n\n"
+                "against in Section 6. The small-shift lines are the opposite lesson: for the identical pair the right answer is 0 px, "
+                "and a median of hundreds of pixels is a failure that a model with no confidence output reports as confidently as a "
+                "correct answer. A sanity check is only useful if it can fail — choosing probes until they pass would have hidden "
+                "this.</details>\n\n"
                 "## 6. Dataset, validation and split · [Evaluation practice]\n\n"
                 "This cell runs the `prepare` stage. It renders `N_PAIRS` scenes (seed `DATASET_SEED`; scene `i` uses seed "
                 "`DATASET_SEED × 100003 + i`), each with exact disparity and a valid mask, and validates every record **before any model "
@@ -510,7 +525,8 @@ TEMPLATE = {
                 'TRAIN_ITERS = 12  # @param {{type:"integer"}}\n'
                 'FREEZE_ENCODERS = True  # @param {{type:"boolean"}}\n\n'
                 "run_stage('adapt', '--epochs', EPOCHS, '--batch-size', BATCH_SIZE, '--lr', LEARNING_RATE, '--train-iters', TRAIN_ITERS,\n"
-                "          '--freeze-encoders', int(FREEZE_ENCODERS), '--seed', SEED, '--iters', VALID_ITERS)"
+                "          '--freeze-encoders', int(FREEZE_ENCODERS), '--seed', SEED, '--iters', VALID_ITERS)\n"
+                "ADAPT_OUT = '' if FREEZE_ENCODERS else 'activity_unfrozen/'  # the Section 14 activity writes beside the canonical outputs"
             ),
         },
         # ---------------------------------------------------------------- 9. evaluate
@@ -518,8 +534,10 @@ TEMPLATE = {
             "md": (
                 "**What to notice (Section 8):** the `start` line (the checkpoint, freshly verified), the epoch losses, the trainable "
                 "share of the parameters, and the adapter's size and tensor count.\n\n"
-                "<details><summary>Check your reasoning</summary>The pretrained network already fits these scenes reasonably, so the loss "
-                "starts moderate and typically falls by a modest fraction over three short epochs — not to zero. With the encoders "
+                "<details><summary>Check your reasoning</summary>Most of it. The checkpoint was fine-tuned on Middlebury photographs, so these "
+                "rendered scenes are out of its domain and the epoch-1 loss is comparatively high; it then falls steeply. In the recorded "
+                "T4 run the mean loss went from 2.709 in epoch 1 to 0.711 in epoch 3, about −74 %. It does not reach zero, and one run on "
+                "24 rendered pairs says nothing about other domains. With the encoders "
                 "frozen, roughly half of the 11.1 million parameters train (the encoders hold the rest), and the adapter holds only the "
                 "tensors that could change. A loss that rises, or turns into `nan`, points at the learning rate; see "
                 "Troubleshooting.</details>\n\n"
@@ -542,8 +560,10 @@ TEMPLATE = {
             "md": (
                 "**What to notice (Section 9):** the `adapted` row against the `pretrained` row for every column, the per-pair count, and "
                 "the run history's row 0.\n\n"
-                "<details><summary>Check your reasoning</summary>A short fine-tune on the target domain usually lowers held-out EPE and "
-                "the bad-pixel rates a little, because the update block learns this domain's textures, gain difference and noise. Three "
+                "<details><summary>Check your reasoning</summary>On this rendered domain a short fine-tune lowers held-out EPE substantially, "
+                "because the update block learns the domain's textures, gain difference and noise: in the recorded T4 run EPE roughly "
+                "halved (0.231 → 0.112 px, about −52 %), bad-3 fell from 0.0079 to 0.0046, and the adapted model was better on 8 of 8 "
+                "pairs. That is 8 rendered pairs and one run, so read the direction and the count rather than the exact gain. Three "
                 "things can legitimately differ from that: the improvement may be small compared with pair-to-pair spread (read the "
                 "per-pair count, not only the mean); one metric may improve while another does not; and on some pairs the adapted model "
                 "can be worse. With 8 held-out pairs and one run, report the direction and the count, not a precise gain. If the adapted "
@@ -559,7 +579,7 @@ TEMPLATE = {
             "code": (
                 'NEW_DATA_SEED = 99  # @param {{type:"integer"}}\n\n'
                 "run_stage('infer', '--new-seed', NEW_DATA_SEED, '--iters', VALID_ITERS)\n"
-                "show_image('{stem}_new_pairs.png', 'Unseen pairs: left, ground truth, pretrained, adapted')"
+                "show_image(ADAPT_OUT + '{stem}_new_pairs.png', 'Unseen pairs: left, ground truth, pretrained, adapted')"
             ),
         },
         # ---------------------------------------------------------------- 11. reload
@@ -605,7 +625,7 @@ TEMPLATE = {
                 "held-out table — followed by the run directory."
             ),
             "code": (
-                "result = load_record('{stem}_result.json')\n"
+                "result = load_record(ADAPT_OUT + '{stem}_result.json')\n"
                 "print({{'model': result['model']['id'], 'checkpoint_revision': result['model']['revision'], 'upstream_commit': result['upstream_code']['commit'],\n"
                 "       'repository_revision': result['repository_revision'], 'device': result['model']['device'], 'dataset_sha256': result['dataset_sha256'][:16] + '...'}})\n"
                 "print({{'artifact_sha256': result['artifact']['sha256'][:16] + '...', 'artifact_bytes': result['artifact']['bytes'], 'reload_equivalent': result['reload_parity']['equivalent']}})\n"
@@ -621,7 +641,10 @@ TEMPLATE = {
                 "- **Pair branch** (`USE_BYOD_PAIR`): one **rectified** pair — two images of the same size, each side 64..1280 px, at "
                 "most 1,310,720 pixels — and optionally its ground-truth disparity for the left image (`.pfm`, `.npy` or 16-bit KITTI "
                 "`.png`). It runs `validate_inputs`, the pretrained model, SGBM and `evaluation_report` (`not-measurable` without ground "
-                "truth) and writes `outputs/byod/byod_pair_*`. Unrectified photos (two phone shots, for example) violate the row "
+                "truth) and writes `outputs/byod/byod_pair_*`. **Near-zero disparity warning:** this checkpoint, in this pipeline, read every "
+                "uniform 0–4 px random-dot shift wildly wrong (Section 5), and no scene with disparity below 2 px has been evaluated, so "
+                "distant backgrounds, the sky and small-baseline rigs may receive confident disparities larger than the image is wide; "
+                "RAFT-Stereo outputs no confidence that would flag them. Check such regions against ground truth or by eye. Unrectified photos (two phone shots, for example) violate the row "
                 "assumption and give meaningless disparity. Through the upload dialog, upload two or three files whose names say which "
                 "is which: `left`/`im0`, `right`/`im1`, and `disp` for the ground truth.\n"
                 "- **Dataset branch** (`USE_BYOD_DATASET`): a folder (or one `.zip`) holding `pairs.json` — a list of `{{\"left\", "
@@ -749,7 +772,9 @@ TEMPLATE = {
         "2. **Change:** in Section 8 set `FREEZE_ENCODERS = False`. Change nothing else.\n"
         "3. **Run:** select the Section 8 cell and choose **Runtime → Run after**. Section 8 loads the verified checkpoint afresh in a "
         "new process (its `start` line says so) and trains every parameter; Section 9 adds row 1 to the run history; Sections 10–12 "
-        "re-run on the new adapter.\n"
+        "re-run on the new adapter. With `FREEZE_ENCODERS = False` every file Sections 8–12 write goes to `outputs/activity_unfrozen/` "
+        "under the same names, so the canonical adapter, result record and disparity maps in `outputs/` stay as the default run left "
+        "them; Sections 10 and 12 show the activity's files. Set `FREEZE_ENCODERS = True` again to return to the canonical files.\n"
         "4. **Observe:** in Section 8, the trainable parameter count rises to all 11,116,176 and the adapter grows (it now carries the "
         "encoders). In Section 9 compare rows 0 and 1: `adapted_epe`, `adapted_bad_3px`, `final_loss` and `train_seconds`.\n"
         "5. **Explain:** in one sentence, why can training more parameters lower the training loss without lowering the held-out EPE?\n\n"
@@ -757,8 +782,8 @@ TEMPLATE = {
         "often falls further; whether the held-out EPE follows depends on whether the encoders' changes generalise from 24 rendered "
         "pairs, and with so few pairs they can also start to fit the training scenes' particular textures. Both runs start from the same "
         "checkpoint with the same seed, so the comparison is fair; but it is one run each on 8 held-out pairs, so a difference of a few "
-        "hundredths of a pixel is unresolved, not a ranking of the two settings. This notebook has no recorded hosted run of this "
-        "comparison: your run history is the measurement.</details>\n\n"
+        "hundredths of a pixel is unresolved, not a ranking of the two settings. No hosted run of this comparison has been recorded: "
+        "your run history is the measurement.</details>\n\n"
         "## Interpretation and limits\n\n"
         "Start from your own run: the Section 7 baseline table, the Section 9 adapted row and per-pair count, and the Section 10 count.\n\n"
         "**What this notebook established, in this runtime.** The carried upstream RAFT-Stereo source was verified file by file against "
@@ -795,11 +820,12 @@ TEMPLATE = {
         "- **Section 2 fails while downloading, or reports a size or hash mismatch.** The `uv` wheel, the managed Python and the locked "
         "packages come from PyPI and python-build-standalone; run the cell again. A mismatch is refused on purpose — if it repeats, the "
         "download is being altered.\n"
-        "- **Not enough disk.** The isolated environment needs about 8 GiB. Start a fresh runtime, or delete old `outputs/` run "
-        "directories and the temporary `raft_stereo_env_*` folders.\n"
-        "- **Section 3 says the checkpoint is not pinned.** This revision of the notebook was generated before the checkpoint's "
-        "SHA-256 was recorded; use a revision of the notebook generated after pinning (see the repository's "
-        "`docs/release-verification.md`).\n"
+        "- **Not enough disk.** The check asks for about 8 GiB for the isolated environment (an estimate). Start a fresh runtime, or delete "
+        "old `outputs/` run directories; an environment built from the same lock earlier in this runtime is reused and needs no more.\n"
+        "- **\"The run directory … has no carried files, or the isolated environment is gone: run the three Infrastructure cells again "
+        "in order (Sections 1, 2 and 3)\".** Section 1 was run with `NEW_RUN_DIRECTORY` ticked (a fresh, empty run directory), or the "
+        "runtime's temporary directory was cleared. Run Sections 1, 2 and 3 again in order, then the cell you wanted, or **Run all**. "
+        "Re-running the Section 1 cell on its own with the default setting keeps the run directory and needs nothing else.\n"
         "- **Section 3 fails to download or stops on a digest mismatch.** The archive comes from upstream's Dropbox link without a "
         "credential; run the cell again. A size or SHA-256 mismatch is never loaded: if it repeats, the upstream archive has changed "
         "and the notebook must be re-pinned by a maintainer. Delete `weights/` before retrying a partial download.\n"

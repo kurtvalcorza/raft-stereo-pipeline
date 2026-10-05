@@ -98,6 +98,7 @@ def test_unpinned_weights_stage_stops_the_kernel_with_the_stage_message(tmp_path
 
 @pytest.fixture
 def stages(monkeypatch, tmp_path):
+    pytest.importorskip("torch")  # the stages run a random-init network; tests/test_review_fixes.py covers them without torch
     ts = _load("tutorial_stages")
 
     def base(run):
@@ -152,10 +153,11 @@ def test_sample_path_runs_every_stage_in_order(stages) -> None:
     assert len(list((out / "raft_stereo_disparity").glob("*.npy"))) == 3
     evaluation = json.loads((out / "raft_stereo_held_out_evaluation.json").read_text())
     assert len(evaluation["run_history"]) == 1
-    # Re-running adapt and evaluate (the Section 14 activity) starts from the checkpoint and adds a history row.
+    # Re-running adapt and evaluate (the Section 14 activity) starts from the checkpoint and adds a history row; its files
+    # go to outputs/activity_unfrozen/, beside the canonical ones (RST-m3).
     run("adapt", "--epochs", 1, "--batch-size", 2, "--lr", 2e-5, "--train-iters", 1, "--freeze-encoders", 0, "--seed", 1, "--iters", 2)
     run("evaluate", "--iters", 2)
-    history = json.loads((out / "raft_stereo_held_out_evaluation.json").read_text())["run_history"]
+    history = json.loads((out / "activity_unfrozen" / "raft_stereo_held_out_evaluation.json").read_text())["run_history"]
     assert [row["freeze_encoders"] for row in history] == [True, False]
     assert history[1]["trainable_parameters"] == P.EXPECTED_PARAMETERS
 

@@ -34,7 +34,13 @@ from typing import Any
 STEM = "raft_stereo"
 DEMO_SEED = 7
 DEMO_SGBM_RANGE = 64  # the sample contract's disparity range (at most 40 px) rounded up to a multiple of 16, plus margin
-PROBE_SHIFTS = (8, 16)  # uniform random-dot shifts this checkpoint reads exactly; 0-4 px fail (docs/execution-evidence/2026-10-05/probe_shift_diagnostic.md)
+PROBE_SHIFTS = (8, 16)  # uniform random-dot shifts this checkpoint reads exactly (docs/execution-evidence/2026-10-05/probe_shift_diagnostic.md)
+# Shown, not hidden: every 0-4 px uniform random-dot shift failed in the recorded diagnostic. Whether the checkpoint or this
+# pipeline causes it is not yet known (it needs a hosted run of upstream demo.py); the stage reports these as a known
+# limitation and never stops on them.
+LIMITATION_SHIFTS = (0, 2, 4)
+LIMITATION_EPE_PX = 1.0  # a probe with EPE above this is reported as failed
+ACTIVITY_DIR = "activity_unfrozen"  # Section 14 (FREEZE_ENCODERS = False) writes here, beside the canonical outputs
 N_NEW_PAIRS = 3
 RELOAD_TOLERANCE_PX = {"mean_abs": 1e-3, "max_abs": 1e-2}
 
@@ -177,6 +183,15 @@ def load_data(run: Run, stage: str) -> tuple[list[dict[str, Any]], list[dict[str
     return train, held, data
 
 
+def use_configuration_outputs(run: Run, freeze_encoders: bool) -> None:
+    """Point ``run.out`` at the outputs of this fine-tuning configuration. The default (frozen encoders) writes the
+    canonical files in ``outputs/``; the Section 14 activity (every parameter trainable) writes the same names under
+    ``outputs/activity_unfrozen/``, so it never overwrites the canonical adapter, result record or disparity maps."""
+    if run.namespace == "sample" and not freeze_encoders:
+        run.out = run.out / ACTIVITY_DIR
+        run.out.mkdir(parents=True, exist_ok=True)
+
+
 def save_panel(run: Run, name: str, images: list[Any], labels: list[str], columns: int = 3) -> Path:
     from raft_stereo_pipeline.samples import panel
 
@@ -263,7 +278,8 @@ def stage_demo(run: Run) -> None:
 
 
 def stage_probes(run: Run) -> None:
-    """Section 5: two random-dot pairs whose answer is known exactly — shifted by 8 px and by 16 px."""
+    """Section 5: random-dot pairs whose answer is known exactly — shifted by 8 px and by 16 px (the checks), then by
+    0, 2 and 4 px (a known limitation of this checkpoint in this pipeline, shown with its verdict, never a stop)."""
     import numpy as np
 
     from raft_stereo_pipeline import disparity_metrics, random_dot_pair
@@ -271,6 +287,20 @@ def stage_probes(run: Run) -> None:
     iters = run.options.iters
     pipe = load_base(run)
     rows = []
+    limitation = []
+    for shift in LIMITATION_SHIFTS:
+        pair = random_dot_pair(shift)
+        disparity = pipe.estimate(pair["left"], pair["right"], iters=iters)["disparity"]
+        valid = pair["valid"]
+        metrics = disparity_metrics(disparity, pair["disparity"], valid)
+        row = {
+            "probe": pair["id"],
+            "true_disparity_px": shift,
+            "predicted_median_px": round(float(np.median(disparity[valid])), 3),
+            "epe": round(float(metrics["epe"]), 3),
+            "verdict": "read correctly" if metrics["epe"] <= LIMITATION_EPE_PX else "FAILED (known limitation, see Section 5)",
+        }
+        limitation.append(row)
     for shift in PROBE_SHIFTS:
         pair = random_dot_pair(shift)
         disparity = pipe.estimate(pair["left"], pair["right"], iters=iters)["disparity"]
@@ -285,7 +315,12 @@ def stage_probes(run: Run) -> None:
         }
         rows.append(row)
         print(row)
-    run.write_output("probes.json", {"iters": iters, "probes": rows})
+    print("known limitation — small uniform shifts (0 = identical images):")
+    for row in limitation:
+        print(row)
+    failed = [row["true_disparity_px"] for row in limitation if row["verdict"].startswith("FAILED")]
+    print({"small_shift_probes_failed": failed, "cause": "not yet determined (checkpoint or pipeline); needs a hosted run of upstream demo.py on the same pairs"})
+    run.write_output("probes.json", {"iters": iters, "probes": rows, "limitation_probes": limitation, "limitation_epe_threshold_px": LIMITATION_EPE_PX})
 
 
 def stage_prepare(run: Run) -> None:
@@ -402,6 +437,7 @@ def stage_adapt(run: Run) -> None:
     import numpy as np
 
     opts = run.options
+    use_configuration_outputs(run, bool(opts.freeze_encoders))
     train, held, data = load_data(run, "adapt")
     pipe = load_base(run)
     print({"start": "pretrained checkpoint, freshly loaded and verified", "source": pipe.source, "device": pipe.device}, flush=True)
@@ -447,6 +483,7 @@ def stage_evaluate(run: Run) -> None:
     train, held, data = load_data(run, "evaluate")
     baselines = run.read_state("baselines.json", "evaluate")
     adapted_state = run.read_state("adapt.json", "evaluate")
+    use_configuration_outputs(run, adapted_state["finetune"]["freeze_encoders"])
     if baselines["iters"] != iters:
         raise RuntimeError(f"the baselines were scored with {baselines['iters']} iterations, not {iters}; use the same VALID_ITERS or re-run the baselines cell")
     pipe = load_adapted(run, Path(adapted_state["artifact"]["path"]))
@@ -506,6 +543,7 @@ def stage_infer(run: Run) -> None:
     opts = run.options
     train, held, data = load_data(run, "infer")
     adapted_state = run.read_state("adapt.json", "infer")
+    use_configuration_outputs(run, adapted_state["finetune"]["freeze_encoders"])
     if data["source"] == "byod":
         new_pairs, origin = held, "the BYOD held-out pairs (never used for training)"
     else:
@@ -570,6 +608,7 @@ def stage_reload(run: Run) -> None:
 
     train, held, data = load_data(run, "reload")
     adapted_state = run.read_state("adapt.json", "reload")
+    use_configuration_outputs(run, adapted_state["finetune"]["freeze_encoders"])
     evaluated = run.read_state("evaluate.json", "reload")
     artifact = Path(adapted_state["artifact"]["path"])
     metadata = RaftStereoPipeline.read_artifact_metadata(artifact)
@@ -622,7 +661,7 @@ def stage_reload(run: Run) -> None:
     run.write_output(f"{run.prefix}_result.json", result)
     print(f"{run.out.relative_to(run.root).as_posix()}/:")
     for path in sorted(run.out.rglob("*")):
-        if path.is_file() and (run.namespace != "sample" or "byod" not in path.parts):
+        if path.is_file() and (run.namespace != "sample" or not {"byod", ACTIVITY_DIR} & set(path.relative_to(run.out).parts)):
             print(f"  - {path.relative_to(run.out).as_posix()} ({path.stat().st_size / 1024:.1f} KB)")
 
 
