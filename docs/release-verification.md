@@ -173,7 +173,7 @@ Google Colab's kernel and upload dialog; the full default field values (32 pairs
 
 A sweep of uniform random-dot shifts (0, 1, 2, 4, 8, 16 px) against dot sizes (1, 2, 4, 8 px), run with the pinned checkpoint in Colab through `RaftStereoPipeline.from_pretrained` at `f0d56f1`. Every shift of 0–4 px failed at every dot size (medians 128–367 px); 8 px and 16 px were exact (EPE ≤ 0.032 px). Table: `docs/execution-evidence/2026-10-05/probe_shift_diagnostic.md`.
 
-### 2026-10-05 — Google Colab T4, clean one-pass `Run all` of blob `44474b8` (current notebook)
+### 2026-10-05 — Google Colab T4, clean one-pass `Run all` of blob `44474b8`
 
 - **Subject:** `tutorials/raft_stereo_colab.ipynb`, blob `44474b8480b4ee6a0099fa678c6b4efb4711906b` at commit `1710c27` (8 px and 16 px probes; carried files labelled with the parent `ac3cc07`). Source cells byte-identical to that blob. Executed copy: `docs/execution-evidence/2026-10-05/raft_stereo_colab_44474b8_colab-t4.ipynb`.
 - **Runtime and procedure:** fresh Google Colab runtime, Tesla T4, kernel CPython 3.13.15; `Run all` with no field edited; execution counts 1–14 in order; outputs under `/content/outputs/`; isolated environment (CPython 3.12.12, 35 locked packages, `torch 2.14.0+cu130`, CUDA) built in 68 s.
@@ -185,3 +185,19 @@ A sweep of uniform random-dot shifts (0, 1, 2, 4, 8, 16 px) against dot sizes (1
   - Section 9 (unseen pairs): adapted lower on 3 of 3.
   - Section 10: reload parity exact (0.0 px; held-out EPE 0.11171892 in memory and in a fresh process).
 - **Caveats:** BYOD branches not run (REL12 open). One seed; rendered tutorial sample, not a benchmark.
+
+### 2026-10-10 — local CPU comparison with upstream `demo.py`'s inference path (RST-M1, outside the tutorial)
+
+A venv installed from the hash lock (CPU torch 2.14.0 in place of the CUDA wheel) ran the pinned checkpoint through `RaftStereoPipeline.estimate` and through a line-for-line re-implementation of upstream `demo.py` (load, `InputPadder(divis_by=32)`, `test_mode=True`) at the carried commit. Output was identical (max difference 0.0 px) on 0, 1, 2, 4 and 8 px random-dot pairs and on a rendered scene given as both images (about 416 px for a true 0); upstream's `alt` correlation failed the same way. The near-zero failure is the checkpoint's, not this pipeline's. Not clean-runtime evidence. Files: `docs/execution-evidence/2026-10-10-rst-m1-upstream-comparison/`.
+
+### 2026-10-10 — Google Colab T4, clean one-pass run of blob `f19a075` (current notebook)
+
+- **Subject:** `tutorials/raft_stereo_colab.ipynb`, blob `f19a075adc0e4b4faf928c75cea3e18290326665` at commit `b7dfcfc` (carried files labelled with the parent `b140287`). The suite checked the git blob before upload; every source cell of the executed copy is byte-identical to that blob. Executed copy and run summary: `docs/execution-evidence/2026-10-10-b7dfcfc/`.
+- **Runtime and procedure:** fresh Google Colab session, Tesla T4, kernel CPython 3.13.15; all 14 code cells executed in order by the Colab CLI (`colab exec -f`, not a browser `Run all`), no field edited, wall time 187.5 s; isolated environment (CPython 3.12.12, 35 locked packages, `torch 2.14.0+cu130`, CUDA) built in 73 s (`environment_reused: False`).
+- **Observed result:** 14/14 cells, 0 errors, no restart.
+  - Section 3: checkpoint downloaded and verified at the pinned SHA-256 (15.6 s).
+  - Section 5: probes 8 px → 8.001 px (EPE 0.032), 16 px → 16.01 px (EPE 0.030); known-failure probes 0 / 2 / 4 px → medians 235.243 / 149.825 / 131.93 px, each `FAILED (known limitation, see Section 5)`.
+  - Section 6: 32 pairs, 24 / 8 split; three refusals.
+  - Sections 7–9: epoch losses 2.709, 0.933, 0.711; held-out EPE median 8.223, SGBM 0.653, pretrained 0.231, adapted 0.112 (bad-3px 0.0045); adapted lower on 8 of 8 held-out and 3 of 3 unseen pairs.
+  - Section 10: reload equivalent (`reload_equivalent: True`).
+- **Caveats:** BYOD branches not run (REL12 open); the Section 14 activity, a Section 1 re-run and a second Run all (environment reuse) were not exercised. One seed; rendered tutorial sample, not a benchmark.

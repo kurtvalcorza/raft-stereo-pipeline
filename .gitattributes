@@ -5,3 +5,6 @@ src/raft_stereo_pipeline/third_party/** -text
 # The hash lock and the stage runner are carried into the notebook and hashed there; keep LF.
 tutorials/requirements-colab.lock.txt text eol=lf
 tools/tutorial_stages.py text eol=lf
+# Executed notebooks are evidence: keep their recorded bytes exactly (no line-ending conversion).
+docs/execution-evidence/**/*.ipynb -text
+docs/execution-evidence/**/run_summary.json -text
