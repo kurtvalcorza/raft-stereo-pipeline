@@ -119,11 +119,27 @@ def test_rst_M1_untested_scope_claim_is_gone_and_the_limitation_is_shown_and_war
     text = NOTEBOOK.read_text(encoding="utf-8")
     assert "not of small disparities in general" not in text
     md = "\n".join(c["source"] for c in _cells() if c["cell_type"] == "markdown")
-    assert "known failure at 0–4 px" in md and "the cause has not been determined" in md
+    assert "known failure at 0–4 px" in md and "the failure comes from the checkpoint, not from this pipeline" in md
+    assert "the cause has not been determined" not in md
     byod = next(c["source"] for c in _cells() if c["source"].startswith("## 13."))
     assert "Near-zero disparity warning" in byod
     card = (ROOT / "MODEL_CARD.md").read_text(encoding="utf-8")
     assert "rendered scenes with small disparities are read well" not in card
+
+
+def test_rst_M1_cause_claim_is_backed_by_the_recorded_upstream_comparison() -> None:
+    """The notebook says the checkpoint, not the pipeline, causes the near-zero failure; that rests on the recorded
+    comparison against upstream demo.py's inference path, which must show identical output on the failing pairs."""
+    evidence = ROOT / "docs" / "execution-evidence" / "2026-10-10-rst-m1-upstream-comparison"
+    record = json.loads((evidence / "rst_m1_upstream_comparison.json").read_text(encoding="utf-8"))
+    assert record["meta"]["upstream_commit"] == P.UPSTREAM_COMMIT and record["meta"]["checkpoint_sha256"] == P.MODEL_REVISION
+    rows = {row["case"]: row for row in record["rows"]}
+    for case in ("random_dot_0px", "random_dot_2px", "random_dot_4px", "rendered_scene_identical"):
+        assert rows[case]["max_abs_diff_pipeline_vs_upstream_reg"] == 0.0
+        assert rows[case]["pipeline_epe"] > 100 and rows[case]["upstream_alt_epe"] > 100
+    assert rows["random_dot_8px"]["pipeline_epe"] < 0.1
+    card = (ROOT / "MODEL_CARD.md").read_text(encoding="utf-8")
+    assert "2026-10-10-rst-m1-upstream-comparison" in card and "has not been determined" not in card
 
 
 # ---- RST-m1 / m2 --------------------------------------------------------------------------------------------------
@@ -186,6 +202,7 @@ def _run_check_cell(namespace: dict, source: str | None = None) -> dict:
     return namespace
 
 
+@pytest.mark.skipif(sys.platform != "linux", reason="executes the Section 1 kernel cell, which needs a Linux x86_64 runtime and POSIX venv/bin/python")
 def test_rst_m4_section1_rerun_keeps_the_run_directory(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(shutil, "disk_usage", lambda _path: types.SimpleNamespace(free=10**13))  # the disk check is not under test
@@ -198,6 +215,7 @@ def test_rst_m4_section1_rerun_keeps_the_run_directory(tmp_path: Path, monkeypat
     assert namespace["ROOT"] != first
 
 
+@pytest.mark.skipif(sys.platform != "linux", reason="executes the Section 1 kernel cell, which needs a Linux x86_64 runtime and POSIX venv/bin/python")
 def test_rst_m4_environment_is_keyed_on_the_lock_not_the_run(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(shutil, "disk_usage", lambda _path: types.SimpleNamespace(free=10**13))  # the disk check is not under test
@@ -216,6 +234,7 @@ def _fake_ipython(monkeypatch) -> None:
     monkeypatch.setitem(sys.modules, "IPython.display", display)
 
 
+@pytest.mark.skipif(sys.platform != "linux", reason="executes the Section 1 kernel cell, which needs a Linux x86_64 runtime and POSIX venv/bin/python")
 def test_rst_m4_install_cell_reuses_a_complete_environment_without_downloading(tmp_path: Path, monkeypatch) -> None:
     _fake_ipython(monkeypatch)
     install = next(c["source"] for c in _cells() if c["cell_type"] == "code" and c["source"].startswith("# @title Infrastructure: install the locked runtime"))
@@ -252,3 +271,20 @@ def test_rst_m4_run_stage_names_the_cells_to_rerun_when_the_run_directory_is_emp
         namespace["run_stage"]("prepare")
     troubleshooting = next(c["source"] for c in _cells() if "## Troubleshooting" in c["source"])
     assert "run the three Infrastructure cells again in order (Sections 1, 2 and 3)" in troubleshooting
+
+
+def test_stage_processes_import_neither_ipython_nor_google_colab() -> None:
+    """Stages run in the isolated environment, which has neither IPython nor google.colab: only kernel cells may use them
+    (display in the install cell, the BYOD upload dialog). A carried module that imported either would fail on Colab;
+    there is no worker and no google.colab stub that would need a ModuleSpec."""
+    import re
+
+    nb = json.loads(NOTEBOOK.read_text(encoding="utf-8"))
+    carried = [name for name in nb["metadata"]["dimer"]["generated_from"]["files"] if name.endswith(".py")]
+    paths = [TOOLS / name if name == "tutorial_stages.py" else ROOT / name for name in carried]
+    assert any(path.name == "tutorial_stages.py" for path in paths) and len(paths) >= 9
+    pattern = re.compile(r"^\s*(from|import)\s+(IPython|google)\b", re.M)
+    offenders = [str(path) for path in paths if pattern.search(path.read_text(encoding="utf-8"))]
+    assert not offenders, offenders
+    kernel = "\n".join("".join(cell["source"]) for cell in nb["cells"] if cell["cell_type"] == "code")
+    assert not re.search(r"sys\.modules\[['\"]google|ModuleType\(['\"]google", kernel)

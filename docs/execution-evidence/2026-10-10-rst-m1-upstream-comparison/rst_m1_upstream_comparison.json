@@ -1,0 +1,87 @@
+{
+ "meta": {
+  "torch": "2.14.0+cpu",
+  "upstream_commit": "6e93ed2169bd858dbb43033988563f3b0bb49506",
+  "checkpoint_sha256": "d22e84c0e431bf31d7cc66902c40601859eb40b35ef7f4399ea81276c2915819",
+  "device": "cpu",
+  "iters": 32,
+  "image_size": [
+   320,
+   224
+  ]
+ },
+ "rows": [
+  {
+   "case": "random_dot_0px",
+   "true_px": 0.0,
+   "pipeline_median": 235.666,
+   "pipeline_epe": 235.32,
+   "upstream_reg_median": 235.666,
+   "upstream_reg_epe": 235.32,
+   "max_abs_diff_pipeline_vs_upstream_reg": 0.0,
+   "upstream_alt_median": 235.755,
+   "upstream_alt_epe": 235.495,
+   "seconds": 199.8
+  },
+  {
+   "case": "random_dot_1px",
+   "true_px": 1.0,
+   "pipeline_median": 199.323,
+   "pipeline_epe": 197.948,
+   "upstream_reg_median": 199.323,
+   "upstream_reg_epe": 197.948,
+   "max_abs_diff_pipeline_vs_upstream_reg": 0.0,
+   "upstream_alt_median": 199.301,
+   "upstream_alt_epe": 197.926,
+   "seconds": 43.1
+  },
+  {
+   "case": "random_dot_2px",
+   "true_px": 2.0,
+   "pipeline_median": 149.825,
+   "pipeline_epe": 147.173,
+   "upstream_reg_median": 149.825,
+   "upstream_reg_epe": 147.173,
+   "max_abs_diff_pipeline_vs_upstream_reg": 0.0,
+   "upstream_alt_median": 149.825,
+   "upstream_alt_epe": 147.173,
+   "seconds": 30.7
+  },
+  {
+   "case": "random_dot_4px",
+   "true_px": 4.0,
+   "pipeline_median": 131.932,
+   "pipeline_epe": 127.59,
+   "upstream_reg_median": 131.932,
+   "upstream_reg_epe": 127.59,
+   "max_abs_diff_pipeline_vs_upstream_reg": 0.0,
+   "upstream_alt_median": 131.933,
+   "upstream_alt_epe": 127.591,
+   "seconds": 16.7
+  },
+  {
+   "case": "random_dot_8px",
+   "true_px": 8.0,
+   "pipeline_median": 8.001,
+   "pipeline_epe": 0.032,
+   "upstream_reg_median": 8.001,
+   "upstream_reg_epe": 0.032,
+   "max_abs_diff_pipeline_vs_upstream_reg": 0.0,
+   "upstream_alt_median": 8.001,
+   "upstream_alt_epe": 0.032,
+   "seconds": 150.6
+  },
+  {
+   "case": "rendered_scene_identical",
+   "true_px": 0.0,
+   "pipeline_median": 416.005,
+   "pipeline_epe": 416.267,
+   "upstream_reg_median": 416.005,
+   "upstream_reg_epe": 416.267,
+   "max_abs_diff_pipeline_vs_upstream_reg": 0.0,
+   "upstream_alt_median": 415.953,
+   "upstream_alt_epe": 416.227,
+   "seconds": 29.2
+  }
+ ]
+}

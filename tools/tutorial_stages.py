@@ -35,9 +35,9 @@ STEM = "raft_stereo"
 DEMO_SEED = 7
 DEMO_SGBM_RANGE = 64  # the sample contract's disparity range (at most 40 px) rounded up to a multiple of 16, plus margin
 PROBE_SHIFTS = (8, 16)  # uniform random-dot shifts this checkpoint reads exactly (docs/execution-evidence/2026-10-05/probe_shift_diagnostic.md)
-# Shown, not hidden: every 0-4 px uniform random-dot shift failed in the recorded diagnostic. Whether the checkpoint or this
-# pipeline causes it is not yet known (it needs a hosted run of upstream demo.py); the stage reports these as a known
-# limitation and never stops on them.
+# Shown, not hidden: every 0-4 px uniform random-dot shift failed in the recorded diagnostic. Upstream's own demo.py
+# inference path gives the same output bit for bit (docs/execution-evidence/2026-10-10-rst-m1-upstream-comparison/), so the
+# checkpoint, not this pipeline, causes it; the stage reports these as a known limitation and never stops on them.
 LIMITATION_SHIFTS = (0, 2, 4)
 LIMITATION_EPE_PX = 1.0  # a probe with EPE above this is reported as failed
 ACTIVITY_DIR = "activity_unfrozen"  # Section 14 (FREEZE_ENCODERS = False) writes here, beside the canonical outputs
@@ -319,7 +319,7 @@ def stage_probes(run: Run) -> None:
     for row in limitation:
         print(row)
     failed = [row["true_disparity_px"] for row in limitation if row["verdict"].startswith("FAILED")]
-    print({"small_shift_probes_failed": failed, "cause": "not yet determined (checkpoint or pipeline); needs a hosted run of upstream demo.py on the same pairs"})
+    print({"small_shift_probes_failed": failed, "cause": "the checkpoint: upstream demo.py's inference path gives the same output (docs/execution-evidence/2026-10-10-rst-m1-upstream-comparison/)"})
     run.write_output("probes.json", {"iters": iters, "probes": rows, "limitation_probes": limitation, "limitation_epe_threshold_px": LIMITATION_EPE_PX})
 
 
