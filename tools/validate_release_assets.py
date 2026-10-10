@@ -72,7 +72,7 @@ GUIDED_PREDICT_SECTIONS = (4, 5, 7, 8, 9, 10)
 GLOSSARY_TERMS = ("Rectified stereo pair", "Disparity", "Occlusion and the valid mask", "Correlation volume", "Refinement iterations", "EPE (end-point error)", "Bad-pixel rate", "SGBM", "Held-out split", "Adapter / reload equivalence")
 SECTION_TAGS = ("[Concept]", "[Evaluation practice]", "[Engineering]")
 INFRASTRUCTURE_TITLES = {
-    "check": "# @title Infrastructure: check the runtime, GPU and disk; create a fresh run directory",
+    "check": "# @title Infrastructure: check the runtime, GPU and disk; create or keep this session's run directory",
     "carrier": "# @title Infrastructure: write and verify the carried package, stage runner, lock and manifests",
     "install": "# @title Infrastructure: install the locked runtime into an isolated environment and define the stage runner",
     "weights": "# @title Infrastructure: verify the carried upstream source; stage and digest-verify the pinned checkpoint",
@@ -104,7 +104,7 @@ KERNEL_CODE_MARKERS = (
     "'venv', '--managed-python', '--python', '3.12.12'",
     "'pip', 'install', '--python', str(PYTHON), '--require-hashes', '--only-binary', ':all:'",
     "MPLBACKEND='Agg'",
-    "for name in ('HF_TOKEN', 'HUGGING_FACE_HUB_TOKEN', 'PYTHONPATH', 'PYTHONHOME'):",
+    "for name in ('HF_TOKEN', 'HUGGING_FACE_HUB_TOKEN', 'PYTHONPATH', 'PYTHONHOME', 'PYTHONSTARTUP'):",
     "def run_stage(stage, *options):",
     "detail = error['type'] + ': ' + error['message']",
     "raise RuntimeError(f'Stage {stage!r} failed (exit {process.returncode}): {detail}')",
@@ -115,7 +115,7 @@ KERNEL_CODE_MARKERS = (
     "shutil.rmtree(target, ignore_errors=True)",
     "run_stage(stage, '--namespace', 'byod', *options)",
     "('prepare', ['--byod', dataset_dir,",
-    "load_record('{stem}_result.json')".replace("{stem}", "raft_stereo"),
+    "load_record(ADAPT_OUT + '{stem}_result.json')".replace("{stem}", "raft_stereo"),
 )
 # What the carried stage runner must do (checked on tools/tutorial_stages.py, which the carrier holds byte for byte).
 RUNNER_MARKERS = (
