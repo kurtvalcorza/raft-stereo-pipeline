@@ -13,7 +13,7 @@ dependencies = [
   "opt-einsum==3.4.0",
   "opencv-python-headless==5.0.0.93",
   "safetensors==0.8.0",
-  "pillow==11.3.0",
+  "pillow==13.0.0",
 ]
 [project.optional-dependencies]
 dev = ["pytest==8.4.2", "ruff==0.16.6"]
